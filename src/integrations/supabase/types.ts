@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      cash_register_closings: {
+        Row: {
+          closed_by: string | null
+          closing_date: string
+          created_at: string
+          id: string
+          notes: string | null
+          orders_by_category: Json | null
+          top_products: Json | null
+          total_orders: number
+          total_sales: number
+        }
+        Insert: {
+          closed_by?: string | null
+          closing_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          orders_by_category?: Json | null
+          top_products?: Json | null
+          total_orders?: number
+          total_sales?: number
+        }
+        Update: {
+          closed_by?: string | null
+          closing_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          orders_by_category?: Json | null
+          top_products?: Json | null
+          total_orders?: number
+          total_sales?: number
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -91,6 +127,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          completed_at: string | null
           created_at: string
           customer_name: string | null
           customer_whatsapp: string
@@ -103,6 +140,7 @@ export type Database = {
           whatsapp_notified: boolean
         }
         Insert: {
+          completed_at?: string | null
           created_at?: string
           customer_name?: string | null
           customer_whatsapp: string
@@ -115,6 +153,7 @@ export type Database = {
           whatsapp_notified?: boolean
         }
         Update: {
+          completed_at?: string | null
           created_at?: string
           customer_name?: string | null
           customer_whatsapp?: string
@@ -175,15 +214,63 @@ export type Database = {
           },
         ]
       }
+      settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -310,6 +397,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
