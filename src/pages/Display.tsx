@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Coffee, Maximize } from 'lucide-react';
+import { Coffee, Maximize, QrCode } from 'lucide-react';
 import { useProducts, useCategories } from '@/hooks/useProducts';
+import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
+import { QRCodeDisplay } from '@/components/pos/QRCodeDisplay';
 
 export default function Display() {
   const { data: products = [] } = useProducts();
   const { data: categories = [] } = useCategories();
+  const { data: settings } = useSettings();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [showQR, setShowQR] = useState(false);
 
   // Group products by category
   const productsByCategory = categories.map(cat => ({
@@ -25,6 +29,18 @@ export default function Display() {
     return () => clearInterval(interval);
   }, [productsByCategory.length]);
 
+  // Show QR periodically
+  useEffect(() => {
+    if (!settings?.menu_url) return;
+    
+    const showQRInterval = setInterval(() => {
+      setShowQR(true);
+      setTimeout(() => setShowQR(false), 5000);
+    }, 30000);
+
+    return () => clearInterval(showQRInterval);
+  }, [settings?.menu_url]);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
@@ -34,6 +50,7 @@ export default function Display() {
   };
 
   const currentGroup = productsByCategory[currentSlide];
+  const menuUrl = settings?.menu_url || `${window.location.origin}/menu`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-espresso via-coffee-dark to-espresso text-primary-foreground relative overflow-hidden">
@@ -54,15 +71,36 @@ export default function Display() {
             <p className="text-lg opacity-80">Menú del Día</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleFullscreen}
-          className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
-        >
-          <Maximize className="w-6 h-6" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowQR(!showQR)}
+            className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <QrCode className="w-6 h-6" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleFullscreen}
+            className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <Maximize className="w-6 h-6" />
+          </Button>
+        </div>
       </header>
+
+      {/* QR Code Overlay */}
+      {showQR && menuUrl && (
+        <div className="absolute inset-0 z-20 bg-espresso/90 backdrop-blur-sm flex items-center justify-center animate-fade-in">
+          <div className="text-center">
+            <h2 className="font-display text-3xl font-bold mb-6">¡Ordena desde tu celular!</h2>
+            <QRCodeDisplay menuUrl={menuUrl} showButton={false} size={250} className="text-primary-foreground" />
+            <p className="mt-6 text-lg opacity-80">Escanea el código QR para ver el menú</p>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <main className="relative z-10 p-8 pt-4">

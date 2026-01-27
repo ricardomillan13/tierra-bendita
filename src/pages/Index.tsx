@@ -26,7 +26,7 @@ export default function Index() {
                 Ver Menú
               </Button>
             </Link>
-            <Link to="/pos">
+            <Link to="/auth">
               <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
                 <ClipboardList className="w-5 h-5 mr-2" />
                 Panel POS
@@ -108,7 +108,7 @@ export default function Index() {
                 Menú Clientes
               </Button>
             </Link>
-            <Link to="/pos">
+            <Link to="/auth">
               <Button variant="outline" size="lg" className="w-full sm:w-auto">
                 <ClipboardList className="w-5 h-5 mr-2" />
                 Panel Admin
