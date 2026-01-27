@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Coffee, X } from 'lucide-react';
-import { Product, Category } from '@/types/menu';
+import { Plus, Edit2, Trash2, Coffee } from 'lucide-react';
+import { Product } from '@/types/menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { useAllProducts, useAllCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
+import { ImageUploader } from './ImageUploader';
 
 export function ProductManager() {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,7 +77,7 @@ export function ProductManager() {
       category_id: formData.category_id || null,
       is_available: formData.is_available,
       display_order: formData.display_order,
-      image_url: formData.image_url.trim() || null,
+      image_url: formData.image_url || null,
     };
 
     try {
@@ -126,61 +128,84 @@ export function ProductManager() {
               Nuevo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">
                 {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <Input
-                placeholder="Nombre del producto *"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-              <Textarea
-                placeholder="Descripción"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={2}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  placeholder="Precio *"
-                  type="number"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              <div className="space-y-2">
+                <Label>Imagen del producto</Label>
+                <ImageUploader
+                  currentImage={formData.image_url || null}
+                  onImageChange={(url) => setFormData({ ...formData, image_url: url || '' })}
                 />
-                <Select
-                  value={formData.category_id}
-                  onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
-              <Input
-                placeholder="URL de imagen (opcional)"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              />
+              
+              <div className="space-y-2">
+                <Label htmlFor="product-name">Nombre *</Label>
+                <Input
+                  id="product-name"
+                  placeholder="Nombre del producto"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="product-desc">Descripción</Label>
+                <Textarea
+                  id="product-desc"
+                  placeholder="Descripción del producto"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={2}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="product-price">Precio *</Label>
+                  <Input
+                    id="product-price"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Categoría</Label>
+                  <Select
+                    value={formData.category_id}
+                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
               <div className="flex items-center justify-between">
-                <span className="text-sm">Disponible</span>
+                <Label htmlFor="product-available">Disponible</Label>
                 <Switch
+                  id="product-available"
                   checked={formData.is_available}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
                 />
               </div>
-              <div className="flex gap-2">
+              
+              <div className="flex gap-2 pt-2">
                 <Button variant="outline" className="flex-1" onClick={() => { setIsOpen(false); resetForm(); }}>
                   Cancelar
                 </Button>
@@ -199,9 +224,9 @@ export function ProductManager() {
             key={product.id}
             className="flex items-center gap-3 p-3 rounded-lg bg-card border"
           >
-            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-lg" />
+                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
               ) : (
                 <Coffee className="w-5 h-5 text-muted-foreground" />
               )}

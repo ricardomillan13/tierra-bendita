@@ -1,18 +1,47 @@
-import { useState } from 'react';
-import { Coffee, ClipboardList, Package, Monitor } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Coffee, ClipboardList, Package, Monitor, DollarSign, LogOut, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderCard } from '@/components/pos/OrderCard';
 import { ProductManager } from '@/components/pos/ProductManager';
+import { CashRegister } from '@/components/pos/CashRegister';
+import { QRCodeDisplay } from '@/components/pos/QRCodeDisplay';
+import { SettingsPanel } from '@/components/pos/SettingsPanel';
 import { useOrders } from '@/hooks/useOrders';
+import { useAuth } from '@/hooks/useAuth';
+import { useSettings } from '@/hooks/useSettings';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 export default function POS() {
+  const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
+  const { data: settings } = useSettings();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
   const readyOrders = orders.filter(o => o.status === 'ready');
+
+  const menuUrl = settings?.menu_url || `${window.location.origin}/menu`;
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,6 +58,8 @@ export default function POS() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <QRCodeDisplay menuUrl={menuUrl} />
+            <SettingsPanel />
             <Link to="/display">
               <Button variant="secondary" size="sm">
                 <Monitor className="w-4 h-4 mr-1" />
@@ -40,13 +71,16 @@ export default function POS() {
                 Ver Menú
               </Button>
             </Link>
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10">
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto p-4">
         <Tabs defaultValue="orders" className="space-y-4">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4" />
               Pedidos
@@ -59,6 +93,10 @@ export default function POS() {
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Productos
+            </TabsTrigger>
+            <TabsTrigger value="cash" className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              Caja
             </TabsTrigger>
           </TabsList>
 
@@ -115,6 +153,10 @@ export default function POS() {
 
           <TabsContent value="products">
             <ProductManager />
+          </TabsContent>
+
+          <TabsContent value="cash">
+            <CashRegister />
           </TabsContent>
         </Tabs>
       </main>
