@@ -14,7 +14,7 @@ export default function Index() {
             </div>
           </div>
           <h1 className="font-display text-5xl md:text-6xl font-bold mb-4">
-            Café Aroma
+            Tierra Bendita Cafe
           </h1>
           <p className="text-xl md:text-2xl opacity-90 mb-8 max-w-2xl mx-auto">
             Sistema de menú digital con punto de venta y notificaciones por WhatsApp
@@ -126,7 +126,7 @@ export default function Index() {
 
       {/* Footer */}
       <footer className="py-8 px-6 border-t text-center text-muted-foreground">
-        <p>© 2025 Café Aroma - Sistema de Menú Digital</p>
+        <p>© 2025 Tierra Bendita Cafe - Sistema de Menú Digital</p>
       </footer>
     </div>
   );

@@ -89,7 +89,7 @@ export default function Auth() {
             <div className="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center mb-4">
               <Coffee className="w-10 h-10 text-primary" />
             </div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Café Aroma</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">Tierra Bendita Cafe</h1>
             <p className="text-muted-foreground mt-1">Panel de Administración</p>
           </div>
 
