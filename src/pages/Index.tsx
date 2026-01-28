@@ -27,7 +27,7 @@ export default function Index() {
               </Button>
             </Link>
             <Link to="/auth">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+              <Button size="lg" className="w-full sm:w-auto text-lg px-8 bg-primary-foreground/20 backdrop-blur-sm border-2 border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/30">
                 <ClipboardList className="w-5 h-5 mr-2" />
                 Panel POS
               </Button>
