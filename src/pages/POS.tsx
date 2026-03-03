@@ -23,7 +23,10 @@ export default function POS() {
     if (!authLoading && !user) {
       navigate('/auth');
     }
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user && !isAdmin) {
+      navigate('/');
+    }
+  }, [user, isAdmin, authLoading, navigate]);
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
@@ -53,7 +56,7 @@ export default function POS() {
               <Coffee className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-display text-xl font-bold">Café Aroma</h1>
+              <h1 className="font-display text-xl font-bold">Tierra Bendita Chocolate & Coffee Shop</h1>
               <p className="text-xs opacity-80">Panel de Administración</p>
             </div>
           </div>

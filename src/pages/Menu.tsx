@@ -30,7 +30,7 @@ export default function Menu() {
               <Coffee className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="font-display text-2xl font-bold">Café Aroma</h1>
+              <h1 className="font-display text-2xl font-bold">Tierra Bendita Chocolate & Coffee Shop</h1>
               <p className="text-sm opacity-90">Menú Digital</p>
             </div>
           </div>

@@ -15,7 +15,12 @@ export interface Product {
   price: number;
   image_url: string | null;
   is_available: boolean;
+  show_in_display: boolean;
   display_order: number;
+  // Schedule — null means no restriction (always available)
+  available_days: number[] | null;  // 0=Sun, 1=Mon … 6=Sat
+  available_from: string | null;    // "HH:MM"
+  available_to: string | null;      // "HH:MM"
   created_at: string;
   updated_at: string;
 }
@@ -47,4 +52,17 @@ export interface OrderItem {
   unit_price: number;
   subtotal: number;
   created_at: string;
+}
+
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string | null;
+  discount_type: 'percentage' | 'fixed' | 'text';
+  discount_value: number | null;
+  badge_text: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
 }

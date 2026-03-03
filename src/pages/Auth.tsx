@@ -108,7 +108,7 @@ export default function Auth() {
                     <Input
                       id="email-login"
                       type="email"
-                      placeholder="admin@cafearoma.com"
+                      placeholder="admin@tierrabenditacafe.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
@@ -155,7 +155,7 @@ export default function Auth() {
                     <Input
                       id="email-register"
                       type="email"
-                      placeholder="admin@cafearoma.com"
+                      placeholder="admin@tierrabenditacafe.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
@@ -202,3 +202,4 @@ export default function Auth() {
     </div>
   );
 }
+

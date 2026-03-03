@@ -5,23 +5,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { useAllProducts, useAllCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
+import {
+  useAllProducts,
+  useCreateProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+} from '@/hooks/useProducts';
+import {
+  useAllCategories,
+  useCreateCategory,
+} from '@/hooks/useCategories';
+
 import { useToast } from '@/hooks/use-toast';
 import { ImageUploader } from './ImageUploader';
 
 export function ProductManager() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  
+
   const { data: products = [] } = useAllProducts();
   const { data: categories = [] } = useAllCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const createCategory = useCreateCategory();
   const { toast } = useToast();
+
+  // modal crear categoría
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -90,10 +117,35 @@ export function ProductManager() {
       }
       setIsOpen(false);
       resetForm();
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'No se pudo guardar el producto',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    try {
+      const created = await createCategory.mutateAsync({
+        name: newCategoryName.trim(),
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        category_id: created.id,
+      }));
+
+      setNewCategoryName('');
+      setIsCategoryModalOpen(false);
+      toast({ title: 'Categoría creada' });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear la categoría',
         variant: 'destructive',
       });
     }
@@ -104,7 +156,7 @@ export function ProductManager() {
     try {
       await deleteProduct.mutateAsync(id);
       toast({ title: 'Producto eliminado' });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'No se pudo eliminar el producto',
@@ -113,14 +165,14 @@ export function ProductManager() {
     }
   };
 
-  const getCategoryName = (categoryId: string | null) => {
-    return categories.find(c => c.id === categoryId)?.name || 'Sin categoría';
-  };
+  const getCategoryName = (categoryId: string | null) =>
+    categories.find((c) => c.id === categoryId)?.name || 'Sin categoría';
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-bold">Productos</h2>
+
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -128,85 +180,102 @@ export function ProductManager() {
               Nuevo
             </Button>
           </DialogTrigger>
+
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">
                 {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
               </DialogTitle>
             </DialogHeader>
+
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label>Imagen del producto</Label>
                 <ImageUploader
                   currentImage={formData.image_url || null}
-                  onImageChange={(url) => setFormData({ ...formData, image_url: url || '' })}
+                  onImageChange={(url) =>
+                    setFormData({ ...formData, image_url: url || '' })
+                  }
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="product-name">Nombre *</Label>
+                <Label>Nombre *</Label>
                 <Input
-                  id="product-name"
-                  placeholder="Nombre del producto"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="product-desc">Descripción</Label>
+                <Label>Descripción</Label>
                 <Textarea
-                  id="product-desc"
-                  placeholder="Descripción del producto"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={2}
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="product-price">Precio *</Label>
+                  <Label>Precio *</Label>
                   <Input
-                    id="product-price"
                     type="number"
                     step="0.01"
-                    placeholder="0.00"
                     value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, price: e.target.value })
+                    }
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label>Categoría</Label>
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category_id: value })
+                      }
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setIsCategoryModalOpen(true)}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
-                <Label htmlFor="product-available">Disponible</Label>
+                <Label>Disponible</Label>
                 <Switch
-                  id="product-available"
                   checked={formData.is_available}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, is_available: checked })
+                  }
                 />
               </div>
-              
+
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => { setIsOpen(false); resetForm(); }}>
+                <Button variant="outline" className="flex-1" onClick={() => setIsOpen(false)}>
                   Cancelar
                 </Button>
                 <Button className="flex-1" onClick={handleSubmit}>
@@ -218,32 +287,25 @@ export function ProductManager() {
         </Dialog>
       </div>
 
+      {/* LISTA */}
       <div className="space-y-2">
         {products.map((product) => (
-          <div
-            key={product.id}
-            className="flex items-center gap-3 p-3 rounded-lg bg-card border"
-          >
-            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <div key={product.id} className="flex items-center gap-3 p-3 border rounded-lg">
+            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                <img src={product.image_url} className="w-full h-full object-cover" />
               ) : (
                 <Coffee className="w-5 h-5 text-muted-foreground" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-medium truncate">{product.name}</p>
-                {!product.is_available && (
-                  <span className="text-xs px-2 py-0.5 rounded bg-destructive/20 text-destructive">
-                    No disponible
-                  </span>
-                )}
-              </div>
+
+            <div className="flex-1">
+              <p className="font-medium">{product.name}</p>
               <p className="text-sm text-muted-foreground">
                 ${product.price.toFixed(2)} • {getCategoryName(product.category_id)}
               </p>
             </div>
+
             <Button variant="ghost" size="icon" onClick={() => openEdit(product)}>
               <Edit2 className="w-4 h-4" />
             </Button>
@@ -253,6 +315,30 @@ export function ProductManager() {
           </div>
         ))}
       </div>
+
+      {/* MODAL CREAR CATEGORÍA */}
+      <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nueva categoría</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Input
+              placeholder="Nombre de la categoría"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+            />
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setIsCategoryModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateCategory}>Crear</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

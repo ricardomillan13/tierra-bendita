@@ -1,73 +1,63 @@
-# Welcome to your Lovable project
+# Tierra Bendita Chocolate & Coffee Shop — Sistema POS
 
-## Project info
+Sistema de menú digital con punto de venta y notificaciones por WhatsApp.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tecnologías
 
-## How can I edit this code?
+- **Frontend:** React 18 + TypeScript + Vite
+- **UI:** shadcn/ui + Tailwind CSS
+- **Backend:** Supabase (PostgreSQL + Auth + Storage + Realtime)
+- **Estado/Datos:** TanStack React Query
 
-There are several ways of editing your application.
+## Vistas
 
-**Use Lovable**
+| Ruta | Descripción |
+|---|---|
+| `/` | Landing page pública |
+| `/menu` | Menú digital para clientes (vía QR) |
+| `/pos` | Panel de administración (requiere rol admin) |
+| `/display` | Pantalla para TV/monitor del local |
+| `/auth` | Login / Registro |
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Instalación
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone <GIT_URL>
+cd tierra-bendita-coffee-shop
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Variables de entorno
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<anon_key>
+VITE_SUPABASE_PROJECT_ID=<project_id>
+```
 
-**Use GitHub Codespaces**
+## Base de datos
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Las migraciones están en `supabase/migrations/`. Aplícalas con:
 
-## What technologies are used for this project?
+```sh
+supabase db push
+```
 
-This project is built with:
+## Primer usuario administrador
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Después de registrarte en `/auth`, ejecuta en el SQL Editor de Supabase:
 
-## How can I deploy this project?
+```sql
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('<tu-user-id>', 'admin');
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Scripts
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```sh
+npm run dev      # Servidor de desarrollo
+npm run build    # Build de producción
+npm run test     # Tests
+npm run lint     # Linter
+```

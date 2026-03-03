@@ -67,7 +67,7 @@ export default function Display() {
             <Coffee className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="font-display text-4xl font-bold">Café Aroma</h1>
+            <h1 className="font-display text-4xl font-bold">Tierra Bendita Café</h1>
             <p className="text-lg opacity-80">Menú del Día</p>
           </div>
         </div>
