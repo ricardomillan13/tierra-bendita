@@ -10,7 +10,7 @@ import { QRCodeDisplay } from '@/components/pos/QRCodeDisplay';
 import { SettingsPanel } from '@/components/pos/SettingsPanel';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/hooks/useAuth';
-import { useSettings } from '@/hooks/useSettings';
+import { useSettings, useUpdateSetting } from '@/hooks/useSettings';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
@@ -19,6 +19,12 @@ export default function POS() {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
   const { data: settings } = useSettings();
+  const updateSetting = useUpdateSetting();
+  const isOpen = settings?.is_open ?? true;
+
+  const toggleOpen = () => {
+    updateSetting.mutate({ key: 'is_open', value: !isOpen });
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -62,6 +68,22 @@ export default function POS() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Open/Closed toggle */}
+            <button
+              onClick={toggleOpen}
+              disabled={updateSetting.isPending}
+              style={isOpen
+                ? { background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.5)', color: '#4ade80' }
+                : { background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.5)', color: '#f87171' }
+              }
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
+            >
+              <span
+                className={isOpen ? 'animate-pulse' : ''}
+                style={{ width: 8, height: 8, borderRadius: '50%', background: isOpen ? '#4ade80' : '#f87171', display: 'inline-block', flexShrink: 0 }}
+              />
+              {isOpen ? 'Abierto' : 'Cerrado'}
+            </button>
             <QRCodeDisplay menuUrl={menuUrl} />
             <SettingsPanel />
             <Link to="/display">

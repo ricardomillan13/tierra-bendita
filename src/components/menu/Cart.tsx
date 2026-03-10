@@ -16,11 +16,12 @@ interface CartProps {
   onRemove: (productId: string) => void;
   onClear: () => void;
   getItemId: (item: CartItem) => string;
+  storeOpen?: boolean;
 }
 
 type OrderType = 'here' | 'takeout';
 
-export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onClear, getItemId }: CartProps) {
+export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onClear, getItemId, storeOpen = true }: CartProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerWhatsapp, setCustomerWhatsapp] = useState('');
@@ -85,7 +86,7 @@ export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onCl
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-strong bg-primary hover:bg-primary/90 z-50"
+          className={`fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-strong z-50 transition-all ${storeOpen ? "bg-primary hover:bg-primary/90" : "bg-muted cursor-not-allowed opacity-60"}`}
           size="icon"
         >
           <ShoppingCart className="h-6 w-6" />
@@ -203,7 +204,13 @@ export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onCl
             </div>
 
             {/* Form — scrolls into view on focus */}
-            <div ref={formRef} className="space-y-3">
+            {!storeOpen && (
+              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <p className="text-sm font-semibold text-destructive">🔒 Tienda cerrada</p>
+                <p className="text-xs text-muted-foreground mt-1">No se aceptan pedidos por el momento</p>
+              </div>
+            )}
+            <div ref={formRef} className="space-y-3" style={{ opacity: storeOpen ? 1 : 0.4, pointerEvents: storeOpen ? 'auto' : 'none' }}>
               <Input
                 placeholder="Tu nombre (opcional)"
                 value={customerName}
@@ -227,11 +234,17 @@ export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onCl
               />
             </div>
 
+            {!storeOpen && (
+              <div className="text-center py-2 px-3 rounded-xl text-sm"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>
+                🔒 La tienda está cerrada — no se aceptan pedidos
+              </div>
+            )}
             <Button
               className="w-full"
               size="lg"
               onClick={handleSubmit}
-              disabled={createOrder.isPending}
+              disabled={createOrder.isPending || !storeOpen}
             >
               {createOrder.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

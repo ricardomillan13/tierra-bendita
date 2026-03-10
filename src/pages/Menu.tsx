@@ -36,6 +36,7 @@ export default function Menu() {
   );
 
   const handleAddItem = useCallback((product: Product, size?: 'medium' | 'large') => {
+    if (!isOpen) return;
     cart.addItem(product, size);
     if (!product.is_cross_sell && crossSellProducts.length > 0) {
       const unseen = crossSellProducts.filter(p => !shownSuggestionsRef.current.has(p.id));
@@ -67,6 +68,8 @@ export default function Menu() {
 
   const isLoading = categoriesLoading || productsLoading;
   const dailyPhrase = settings?.daily_phrase || 'El mejor momento para un buen café... es ahora.';
+  const isOpen = settings?.is_open ?? true;
+  const closedMessage = settings?.closed_message || 'Estamos cerrados por el momento, vuelve pronto ☕';
 
   return (
     <div className="min-h-screen" style={{ background: ESPRESSO, color: 'rgba(255,255,255,0.85)' }}>
@@ -112,6 +115,17 @@ export default function Menu() {
         </div>
       </header>
 
+      {/* ── Closed banner */}
+      {!isOpen && (
+        <div
+          className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold"
+          style={{ background: 'rgba(160,20,20,0.97)', color: '#fff' }}
+        >
+          <span className="w-2 h-2 rounded-full bg-red-300" />
+          {closedMessage}
+        </div>
+      )}
+
       {/* ── Sticky category filter ───────────────────────────────────────── */}
       <div className="sticky top-0 z-40 px-4 py-3"
         style={{ background: `${DARK}f0`, backdropFilter: 'blur(12px)', borderBottom: `1px solid rgba(201,168,76,0.08)` }}>
@@ -125,6 +139,20 @@ export default function Menu() {
           )}
         </div>
       </div>
+
+      {/* ── Closed banner ───────────────────────────────────────────────── */}
+      {!isOpen && (
+        <div className="sticky top-[57px] z-30 max-w-lg mx-auto px-4 pt-3">
+          <div className="w-full rounded-xl px-4 py-3 flex items-center gap-3"
+            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <span className="text-lg">🔒</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#f87171' }}>Tienda cerrada</p>
+              <p className="text-xs" style={{ color: 'rgba(248,113,113,0.7)' }}>{closedMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Content ─────────────────────────────────────────────────────── */}
       <main className="max-w-lg mx-auto px-4 pb-28">
@@ -150,7 +178,7 @@ export default function Menu() {
                 <SectionLabel icon={<Star className="w-3 h-3 fill-current" style={{ color: GOLD }} />} label="Sugerencias del día" gold />
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 mt-3">
                   {featuredProducts.map(product => (
-                    <FeaturedCard key={product.id} product={product} onAdd={handleAddItem} />
+                    <FeaturedCard key={product.id} product={product} onAdd={handleAddItem} storeOpen={isOpen} />
                   ))}
                 </div>
               </div>
@@ -161,7 +189,7 @@ export default function Menu() {
               <div className="pt-6">
                 <SectionLabel icon={<Tag className="w-3 h-3" style={{ color: GOLD }} />} label="Promociones" />
                 {promotions.map(promo => (
-                  <PromotionCard key={promo.id} promotion={promo} onAdd={handleAddItem} />
+                  <PromotionCard key={promo.id} promotion={promo} onAdd={handleAddItem} storeOpen={isOpen} />
                 ))}
               </div>
             )}
@@ -175,7 +203,7 @@ export default function Menu() {
             ) : activeCategory ? (
               <div className="pt-4">
                 {filteredProducts.map(product => (
-                  <ProductCard key={product.id} product={product} onAdd={handleAddItem} />
+                  <ProductCard key={product.id} product={product} onAdd={handleAddItem} storeOpen={isOpen} />
                 ))}
               </div>
             ) : (
@@ -184,7 +212,7 @@ export default function Menu() {
                   <div key={group.category.id} className="mb-2">
                     <SectionLabel label={group.category.name} className="pt-4 mb-1" />
                     {group.products.map(product => (
-                      <ProductCard key={product.id} product={product} onAdd={handleAddItem} />
+                      <ProductCard key={product.id} product={product} onAdd={handleAddItem} storeOpen={isOpen} />
                     ))}
                   </div>
                 ))}
@@ -194,7 +222,7 @@ export default function Menu() {
                     <div className="mb-2">
                       <SectionLabel label="Otros" className="pt-4 mb-1" />
                       {uncategorized.map(product => (
-                        <ProductCard key={product.id} product={product} onAdd={handleAddItem} />
+                        <ProductCard key={product.id} product={product} onAdd={handleAddItem} storeOpen={isOpen} />
                       ))}
                     </div>
                   ) : null;
@@ -219,6 +247,7 @@ export default function Menu() {
         onRemove={cart.removeItem}
         onClear={cart.clearCart}
         getItemId={cart.getItemId}
+        storeOpen={isOpen}
       />
     </div>
   );

@@ -5,6 +5,8 @@ interface Settings {
   whatsapp_auto_notify: { enabled: boolean };
   menu_url: string;
   daily_phrase: string;
+  is_open: boolean;
+  closed_message: string;
 }
 
 export function useSettings() {
@@ -21,6 +23,8 @@ export function useSettings() {
         whatsapp_auto_notify: { enabled: true },
         menu_url: '',
         daily_phrase: 'El mejor momento para un buen café... es ahora.',
+        is_open: true,
+        closed_message: 'Estamos cerrados por el momento, pronto regresamos.',
       };
       
       data?.forEach(row => {
@@ -30,6 +34,12 @@ export function useSettings() {
           settings.menu_url = row.value as string;
         } else if (row.key === 'daily_phrase') {
           settings.daily_phrase = row.value as string;
+        } else if (row.key === 'is_open') {
+          settings.is_open = row.value as boolean;
+        } else if (row.key === 'closed_message') {
+          settings.closed_message = row.value as string;
+        } else if (row.key === 'closed_message') {
+          settings.closed_message = row.value as string;
         }
       });
       

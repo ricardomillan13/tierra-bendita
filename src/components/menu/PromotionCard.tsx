@@ -5,14 +5,15 @@ import { promotionToCartProduct } from '@/lib/schedule';
 interface PromotionCardProps {
   promotion: Promotion;
   onAdd: (product: Product) => void;
+  storeOpen?: boolean;
 }
 
-export function PromotionCard({ promotion, onAdd }: PromotionCardProps) {
+export function PromotionCard({ promotion, onAdd, storeOpen = true }: PromotionCardProps) {
   const hasPrice = promotion.discount_value !== null && promotion.discount_type !== 'text';
   const cartProduct = promotionToCartProduct(promotion);
 
   return (
-    <div>
+    <div style={{ opacity: storeOpen ? 1 : 0.4, transition: 'opacity 0.2s' }}>
       <div className="flex items-center gap-3 py-3 px-1">
         {/* Thumbnail */}
         <div className="w-14 h-14 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
@@ -49,7 +50,8 @@ export function PromotionCard({ promotion, onAdd }: PromotionCardProps) {
           )}
           {hasPrice ? (
             <button
-              onClick={() => onAdd(cartProduct)}
+              disabled={!storeOpen}
+              onClick={() => storeOpen && onAdd(cartProduct)}
               className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-95"
               style={{ background: '#c9a84c', color: '#1a0a02' }}
             >

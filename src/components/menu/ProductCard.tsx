@@ -10,6 +10,7 @@ const DARK     = '#1a0a02';
 interface ProductCardProps {
   product: Product;
   onAdd: (product: Product, size?: 'medium' | 'large') => void;
+  storeOpen?: boolean;
 }
 
 function ProductModal({ product, onClose, onAdd }: { product: Product; onClose: () => void; onAdd: (product: Product, size?: 'medium' | 'large') => void }) {
@@ -114,12 +115,12 @@ function ProductModal({ product, onClose, onAdd }: { product: Product; onClose: 
   );
 }
 
-export function ProductCard({ product, onAdd }: ProductCardProps) {
+export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardProps) {
   const [showSizes, setShowSizes] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   const scheduleAvailable = isProductAvailableNow(product);
-  const isUnavailable = !product.is_available || !scheduleAvailable;
+  const isUnavailable = !storeOpen || !product.is_available || !scheduleAvailable;
   const scheduleLabel = formatSchedule(product);
 
   return (

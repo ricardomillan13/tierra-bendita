@@ -6,6 +6,7 @@ import { isProductAvailableNow } from '@/lib/schedule';
 interface FeaturedCardProps {
   product: Product;
   onAdd: (product: Product, size?: 'medium' | 'large') => void;
+  storeOpen?: boolean;
 }
 
 function FeaturedModal({ product, onClose, onAdd }: { product: Product; onClose: () => void; onAdd: (product: Product, size?: 'medium' | 'large') => void }) {
@@ -79,10 +80,10 @@ function FeaturedModal({ product, onClose, onAdd }: { product: Product; onClose:
   );
 }
 
-export function FeaturedCard({ product, onAdd }: FeaturedCardProps) {
+export function FeaturedCard({ product, onAdd, storeOpen = true }: FeaturedCardProps) {
   const [showSizes, setShowSizes] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const isUnavailable = !product.is_available || !isProductAvailableNow(product);
+  const isUnavailable = !storeOpen || !product.is_available || !isProductAvailableNow(product);
 
   return (
     <>
