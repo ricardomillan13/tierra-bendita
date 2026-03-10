@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Coffee, ClipboardList, Package, Monitor, DollarSign, LogOut, Loader2 } from 'lucide-react';
+import { Coffee, ClipboardList, Package, Monitor, DollarSign, LogOut, Loader2, History } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderCard } from '@/components/pos/OrderCard';
+import { OrderHistory } from '@/components/pos/OrderHistory';
 import { ProductManager } from '@/components/pos/ProductManager';
 import { CashRegister } from '@/components/pos/CashRegister';
 import { QRCodeDisplay } from '@/components/pos/QRCodeDisplay';
@@ -83,7 +84,7 @@ export default function POS() {
 
       <main className="max-w-7xl mx-auto p-4">
         <Tabs defaultValue="orders" className="space-y-4">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4" />
               Pedidos
@@ -100,6 +101,10 @@ export default function POS() {
             <TabsTrigger value="cash" className="flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
               Caja
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Historial
             </TabsTrigger>
           </TabsList>
 
@@ -160,6 +165,10 @@ export default function POS() {
 
           <TabsContent value="cash">
             <CashRegister />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <OrderHistory />
           </TabsContent>
         </Tabs>
       </main>

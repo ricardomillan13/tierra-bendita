@@ -169,6 +169,13 @@ export type Database = {
       }
       products: {
         Row: {
+          available_days: number[] | null
+          available_from: string | null
+          available_to: string | null
+          has_sizes: boolean
+          is_cross_sell: boolean
+          is_featured: boolean
+          price_large: number | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -178,9 +185,17 @@ export type Database = {
           is_available: boolean
           name: string
           price: number
+          show_in_display: boolean
           updated_at: string
         }
         Insert: {
+          available_days?: number[] | null
+          available_from?: string | null
+          available_to?: string | null
+          has_sizes?: boolean
+          is_cross_sell?: boolean
+          is_featured?: boolean
+          price_large?: number | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -190,9 +205,17 @@ export type Database = {
           is_available?: boolean
           name: string
           price: number
+          show_in_display?: boolean
           updated_at?: string
         }
         Update: {
+          available_days?: number[] | null
+          available_from?: string | null
+          available_to?: string | null
+          has_sizes?: boolean
+          is_cross_sell?: boolean
+          is_featured?: boolean
+          price_large?: number | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -202,6 +225,7 @@ export type Database = {
           is_available?: boolean
           name?: string
           price?: number
+          show_in_display?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -213,6 +237,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      promotions: {
+        Row: {
+          badge_text: string | null
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number | null
+          display_order: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          badge_text?: string | null
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          badge_text?: string | null
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       settings: {
         Row: {

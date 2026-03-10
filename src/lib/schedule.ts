@@ -1,4 +1,5 @@
 import { Product } from '@/types/menu';
+import { Promotion, Product } from '@/types/menu';
 
 /**
  * Returns true if the product is available right now
@@ -75,4 +76,31 @@ export function formatSchedule(product: Product): string | null {
   }
 
   return parts.join(' · ');
+}
+
+// ── Promotion → CartProduct helper ───────────────────────────────────────────
+
+
+/**
+ * Converts a Promotion into a Product-shaped object so it can
+ * be added to the cart without modifying useCart or CartItem.
+ * Only promotions with a numeric discount_value have a price.
+ */
+export function promotionToCartProduct(promo: Promotion): Product {
+  return {
+    id: `promo_${promo.id}`,
+    name: promo.title,
+    description: promo.description,
+    price: promo.discount_value ?? 0,
+    image_url: promo.image_url,
+    category_id: null,
+    is_available: true,
+    show_in_display: false,
+    display_order: promo.display_order,
+    available_days: null,
+    available_from: null,
+    available_to: null,
+    created_at: promo.created_at,
+    updated_at: promo.updated_at,
+  };
 }

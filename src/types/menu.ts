@@ -21,6 +21,10 @@ export interface Product {
   available_days: number[] | null;  // 0=Sun, 1=Mon … 6=Sat
   available_from: string | null;    // "HH:MM"
   available_to: string | null;      // "HH:MM"
+  has_sizes: boolean;
+  price_large: number | null;
+  is_featured: boolean;
+  is_cross_sell: boolean;         // null = no size variant
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +32,7 @@ export interface Product {
 export interface CartItem {
   product: Product;
   quantity: number;
+  size?: 'medium' | 'large';  // only set when product.has_sizes = true
 }
 
 export interface Order {
@@ -58,9 +63,10 @@ export interface Promotion {
   id: string;
   title: string;
   description: string | null;
-  discount_type: 'percentage' | 'fixed' | 'text';
+  discount_type: 'price' | 'text';
   discount_value: number | null;
   badge_text: string | null;
+  image_url: string | null;
   is_active: boolean;
   display_order: number;
   created_at: string;

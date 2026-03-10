@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, CheckCircle, ChefHat, MessageCircle, Printer, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, ChefHat, MessageCircle, Printer, ChevronDown, ChevronUp, AlertCircle, XCircle } from 'lucide-react';
 import { Order, OrderItem } from '@/types/menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +53,7 @@ const statusConfig = {
 export function OrderCard({ order }: OrderCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showWhatsAppConfirm, setShowWhatsAppConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<'ready' | null>(null);
   
   const { data: items = [] } = useOrderItems(order.id);
@@ -202,24 +203,44 @@ export function OrderCard({ order }: OrderCardProps) {
             {/* Actions */}
             <div className="flex flex-wrap gap-2">
               {order.status === 'pending' && (
-                <Button
-                  size="sm"
-                  onClick={() => handleStatusChange('preparing')}
-                  className="flex-1"
-                >
-                  <ChefHat className="w-4 h-4 mr-1" />
-                  Preparar
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => handleStatusChange('preparing')}
+                    className="flex-1"
+                  >
+                    <ChefHat className="w-4 h-4 mr-1" />
+                    Preparar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowCancelConfirm(true)}
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </>
               )}
               {order.status === 'preparing' && (
-                <Button
-                  size="sm"
-                  onClick={() => handleStatusChange('ready')}
-                  className="flex-1 bg-success hover:bg-success/90"
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Listo
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => handleStatusChange('ready')}
+                    className="flex-1 bg-success hover:bg-success/90"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Listo
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowCancelConfirm(true)}
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </>
               )}
               {order.status === 'ready' && (
                 <>
@@ -251,6 +272,30 @@ export function OrderCard({ order }: OrderCardProps) {
           </div>
         )}
       </div>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-destructive" />
+              Cancelar pedido #{order.order_number}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={() => { updateStatus.mutate({ id: order.id, status: 'cancelled' }); setShowCancelConfirm(false); }}
+            >
+              Sí, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* WhatsApp Confirmation Dialog */}
       <AlertDialog open={showWhatsAppConfirm} onOpenChange={setShowWhatsAppConfirm}>
