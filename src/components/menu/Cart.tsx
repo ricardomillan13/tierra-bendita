@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, X, Minus, Plus, Send, Loader2, UtensilsCrossed, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, X, Minus, Plus, Send, Loader2, UtensilsCrossed, ShoppingBag, Bell } from 'lucide-react';
 import { CartItem } from '@/types/menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,7 +118,18 @@ export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onCl
             <p className="text-muted-foreground mb-6">
               Te notificaremos por WhatsApp cuando esté listo.
             </p>
-            <Button onClick={resetOrderSuccess} className="w-full">
+            {/* Avísame cuando esté listo */}
+            <a
+              href={`https://wa.me/14155238886?text=${encodeURIComponent('Quiero recibir notificaciones de Tierra Bendita')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: '#25D366', color: '#fff' }}
+            >
+              <Bell className="w-4 h-4" />
+              Avísame cuando esté listo
+            </a>
+            <Button onClick={resetOrderSuccess} variant="ghost" className="w-full text-sm">
               Cerrar
             </Button>
           </div>

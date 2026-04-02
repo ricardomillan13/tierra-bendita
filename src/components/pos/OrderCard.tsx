@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useOrderItems, useUpdateOrderStatus, useMarkWhatsAppNotified } from '@/hooks/useOrders';
+import { supabase } from '@/integrations/supabase/client';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -65,17 +66,31 @@ export function OrderCard({ order }: OrderCardProps) {
   const status = statusConfig[order.status];
   const StatusIcon = status.icon;
 
-  const sendWhatsApp = () => {
-    const message = `☕ Tu pedido #${order.order_number} está listo. Puedes pasar a recogerlo. ¡Gracias!`;
-    const whatsappUrl = `https://wa.me/${order.customer_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-    
-    window.open(whatsappUrl, '_blank');
-    markNotified.mutate(order.id);
-    
-    toast({
-      title: 'WhatsApp abierto',
-      description: `Notificación enviada al pedido #${order.order_number}`,
-    });
+  const sendWhatsApp = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          to: order.customer_whatsapp,
+          orderNumber: order.order_number,
+          customerName: order.customer_name || undefined,
+        },
+      });
+
+      if (error) throw error;
+
+      markNotified.mutate(order.id);
+      toast({
+        title: '✓ WhatsApp enviado',
+        description: `Notificación enviada al pedido #${order.order_number}`,
+      });
+    } catch (err) {
+      console.error('Error enviando WhatsApp:', err);
+      toast({
+        title: 'Error al enviar WhatsApp',
+        description: 'Revisa la configuración de Twilio',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleStatusChange = (newStatus: Order['status']) => {
