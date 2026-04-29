@@ -9,8 +9,6 @@ import { QRCodeDisplay } from '@/components/pos/QRCodeDisplay';
 type Slide = { type: 'category'; index: number } | { type: 'promotions' };
 
 export default function Display() {
-  // useAllProducts en vez de useProducts para no depender del flag is_available
-  // El filtro show_in_display + horario se hace en cliente
   const { data: allProducts = [] } = useAllProducts();
   const { data: categories = [] } = useCategories();
   const { data: promotions = [] } = usePromotions();
@@ -19,13 +17,14 @@ export default function Display() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showQR, setShowQR] = useState(false);
 
-  // Productos que deben aparecer en el display ahora mismo
+  // Intervalo configurable desde el POS (default 8s)
+  const intervalMs = (settings?.display_interval_seconds ?? 8) * 1000;
+
   const displayProducts = useMemo(
     () => allProducts.filter(p => p.is_available && p.show_in_display && isProductAvailableNow(p)),
     [allProducts]
   );
 
-  // Agrupar por categoría, omitir categorías vacías
   const productsByCategory = useMemo(
     () =>
       categories
@@ -37,7 +36,6 @@ export default function Display() {
     [categories, displayProducts]
   );
 
-  // Lista de slides estable
   const slides: Slide[] = useMemo(
     () => [
       ...productsByCategory.map((_, i) => ({ type: 'category' as const, index: i })),
@@ -46,25 +44,21 @@ export default function Display() {
     [productsByCategory.length, promotions.length]
   );
 
-  // Auto-avance — se reinicia cuando cambia el número de slides
+  // Auto-avance con intervalo configurable
   useEffect(() => {
     if (slides.length <= 1) return;
-
     const interval = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % slides.length);
-    }, 8000);
-
+    }, intervalMs);
     return () => clearInterval(interval);
-  }, [slides.length]);
+  }, [slides.length, intervalMs]);
 
-  // Resetear slide index si quedó fuera de rango tras cambio de datos
   useEffect(() => {
     if (slides.length > 0 && currentSlide >= slides.length) {
       setCurrentSlide(0);
     }
   }, [slides.length, currentSlide]);
 
-  // QR periódico
   useEffect(() => {
     if (!settings?.menu_url) return;
     const qrInterval = setInterval(() => {
@@ -134,7 +128,6 @@ export default function Display() {
             </div>
           </div>
         ) : currentSlideData?.type === 'category' ? (
-          // ── Category slide ──
           <div className="animate-fade-in" key={`cat-${currentSlide}`}>
             {(() => {
               const group = productsByCategory[currentSlideData.index];
@@ -153,7 +146,7 @@ export default function Display() {
                         style={{ animationDelay: `${index * 100}ms` }}>
                         <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-coffee-light/20 to-cream/20 flex items-center justify-center mb-4 overflow-hidden">
                           {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
                           ) : (
                             <Coffee className="w-16 h-16 opacity-50" />
                           )}
@@ -171,7 +164,6 @@ export default function Display() {
             })()}
           </div>
         ) : (
-          // ── Promotions slide ──
           <div className="animate-fade-in" key="promotions">
             <div className="text-center mb-12">
               <div className="flex items-center justify-center gap-3 mb-2">

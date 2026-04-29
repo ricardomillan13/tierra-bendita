@@ -7,6 +7,7 @@ interface Settings {
   daily_phrase: string;
   is_open: boolean;
   closed_message: string;
+  display_interval_seconds: number;
 }
 
 export function useSettings() {
@@ -16,17 +17,18 @@ export function useSettings() {
       const { data, error } = await supabase
         .from('settings')
         .select('key, value');
-      
+
       if (error) throw error;
-      
+
       const settings: Settings = {
         whatsapp_auto_notify: { enabled: true },
         menu_url: '',
         daily_phrase: 'El mejor momento para un buen café... es ahora.',
         is_open: true,
         closed_message: 'Estamos cerrados por el momento, pronto regresamos.',
+        display_interval_seconds: 8,
       };
-      
+
       data?.forEach(row => {
         if (row.key === 'whatsapp_auto_notify') {
           settings.whatsapp_auto_notify = row.value as { enabled: boolean };
@@ -38,11 +40,11 @@ export function useSettings() {
           settings.is_open = row.value as boolean;
         } else if (row.key === 'closed_message') {
           settings.closed_message = row.value as string;
-        } else if (row.key === 'closed_message') {
-          settings.closed_message = row.value as string;
+        } else if (row.key === 'display_interval_seconds') {
+          settings.display_interval_seconds = row.value as number;
         }
       });
-      
+
       return settings;
     },
   });
@@ -50,18 +52,34 @@ export function useSettings() {
 
 export function useUpdateSetting() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
-      const { data, error } = await supabase
+      // Try update first, insert if not exists
+      const { data: existing } = await supabase
         .from('settings')
-        .update({ value, updated_at: new Date().toISOString() })
+        .select('key')
         .eq('key', key)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+        .maybeSingle();
+
+      if (existing) {
+        const { data, error } = await supabase
+          .from('settings')
+          .update({ value, updated_at: new Date().toISOString() })
+          .eq('key', key)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase
+          .from('settings')
+          .insert({ key, value })
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });

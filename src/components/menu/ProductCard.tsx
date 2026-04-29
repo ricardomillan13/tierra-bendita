@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Coffee, Clock, X } from 'lucide-react';
+import { Plus, Coffee, Clock, X, ChevronDown } from 'lucide-react';
 import { Product } from '@/types/menu';
 import { isProductAvailableNow, formatSchedule } from '@/lib/schedule';
 
@@ -7,17 +7,31 @@ const GOLD     = '#c9a84c';
 const GOLD_DIM = 'rgba(201,168,76,0.5)';
 const DARK     = '#1a0a02';
 
+const FRAPPE_CATEGORY_ID = '6745e707-a695-4433-8bfa-15afb3e4e57f';
+
 interface ProductCardProps {
   product: Product;
-  onAdd: (product: Product, size?: 'medium' | 'large') => void;
+  onAdd: (product: Product, size?: 'medium' | 'large', extras?: { whippedCream: boolean }) => void;
   storeOpen?: boolean;
 }
 
-function ProductModal({ product, onClose, onAdd }: { product: Product; onClose: () => void; onAdd: (product: Product, size?: 'medium' | 'large') => void }) {
+function ProductModal({ product, onClose, onAdd }: {
+  product: Product;
+  onClose: () => void;
+  onAdd: (product: Product, size?: 'medium' | 'large', extras?: { whippedCream: boolean }) => void;
+}) {
   const [selectedSize, setSelectedSize] = useState<'medium' | 'large'>('medium');
+  const [whippedCream, setWhippedCream] = useState(false);
+
+  const isFrappe = product.category_id === FRAPPE_CATEGORY_ID;
+
+  const basePrice = product.has_sizes && selectedSize === 'large' && product.price_large != null
+    ? product.price_large
+    : product.price;
+  const totalPrice = basePrice + (whippedCream ? 6 : 0);
 
   const handleAdd = () => {
-    onAdd(product, product.has_sizes ? selectedSize : undefined);
+    onAdd(product, product.has_sizes ? selectedSize : undefined, isFrappe ? { whippedCream } : undefined);
     onClose();
   };
 
@@ -25,19 +39,18 @@ function ProductModal({ product, onClose, onAdd }: { product: Product; onClose: 
     <>
       {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-        {/* Modal — stop propagation so clicking inside doesn't close */}
+        {/* Modal */}
         <div
           className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-scale-in"
           style={{ background: '#1a0a02', border: '1px solid rgba(201,168,76,0.2)' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Image */}
-          <div className="w-full h-56 relative">
+          <div className="w-full h-56 relative bg-gradient-to-br from-[#3d2010] to-[#5c3418]">
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+              <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #3d2010, #5c3418)' }}>
+              <div className="w-full h-full flex items-center justify-center">
                 <Coffee className="w-16 h-16" style={{ color: `${GOLD}30` }} />
               </div>
             )}
@@ -92,12 +105,37 @@ function ProductModal({ product, onClose, onAdd }: { product: Product; onClose: 
               </div>
             )}
 
+            {/* Frappé: crema batida */}
+            {isFrappe && (
+              <button
+                onClick={() => setWhippedCream(p => !p)}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-4 transition-all"
+                style={{
+                  border: `1px solid ${whippedCream ? GOLD : 'rgba(255,255,255,0.1)'}`,
+                  background: whippedCream ? 'rgba(201,168,76,0.12)' : 'transparent',
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium" style={{ color: whippedCream ? GOLD : 'rgba(255,255,255,0.6)' }}>
+                    🍦 Crema batida
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(201,168,76,0.15)', color: GOLD }}>
+                    +$6.00
+                  </span>
+                </div>
+                <div
+                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                  style={{ borderColor: whippedCream ? GOLD : 'rgba(255,255,255,0.2)', background: whippedCream ? GOLD : 'transparent' }}
+                >
+                  {whippedCream && <div className="w-2 h-2 rounded-full" style={{ background: DARK }} />}
+                </div>
+              </button>
+            )}
+
             {/* Price + Add button */}
             <div className="flex items-center gap-3">
               <span className="font-bold text-2xl" style={{ color: GOLD }}>
-                ${(product.has_sizes && selectedSize === 'large' && product.price_large != null
-                  ? product.price_large
-                  : product.price).toFixed(2)}
+                ${totalPrice.toFixed(2)}
               </span>
               <button
                 onClick={handleAdd}
@@ -130,12 +168,12 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
 
           {/* Thumbnail — clickable */}
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => !isUnavailable && setShowModal(true)}
             className="w-14 h-14 rounded-xl flex-shrink-0 overflow-hidden transition-transform active:scale-95"
             style={{ background: 'linear-gradient(135deg, #3d2010 0%, #5c3418 100%)' }}
           >
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+              <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Coffee className="w-6 h-6" style={{ color: `${GOLD}55` }} />
@@ -143,12 +181,17 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
             )}
           </button>
 
-          {/* Info */}
+          {/* Info — nombre clickable para abrir modal */}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm leading-tight text-white/90 truncate">
-              {product.name}
-              {isUnavailable && <span className="ml-1.5 text-xs text-white/30">· No disponible</span>}
-            </p>
+            <button
+              onClick={() => !isUnavailable && setShowModal(true)}
+              className="text-left w-full"
+            >
+              <p className="font-semibold text-sm leading-tight text-white/90 truncate hover:text-white transition-colors">
+                {product.name}
+                {isUnavailable && <span className="ml-1.5 text-xs text-white/30">· No disponible</span>}
+              </p>
+            </button>
             {product.description && (
               <p className="text-xs text-white/40 truncate mt-0.5">{product.description}</p>
             )}
@@ -178,7 +221,10 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
               className="w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-30 active:scale-95"
               style={{ background: showSizes ? 'rgba(201,168,76,0.15)' : GOLD, color: showSizes ? GOLD : DARK }}
             >
-              <Plus className="w-4 h-4" />
+              {product.has_sizes
+                ? <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showSizes ? 'rotate-180' : ''}`} />
+                : <Plus className="w-4 h-4" />
+              }
             </button>
           </div>
         </div>

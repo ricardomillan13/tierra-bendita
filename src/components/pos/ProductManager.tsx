@@ -1,11 +1,10 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Coffee, Monitor, Tag, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Edit2, Trash2, Coffee, Monitor, Tag, Clock, ChevronDown, ChevronRight, Eye, EyeOff, CheckCircle, XCircle, Settings2 } from 'lucide-react';
 import { Product, Promotion } from '@/types/menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -16,10 +15,11 @@ import {
   useAllPromotions, useCreatePromotion, useUpdatePromotion, useDeletePromotion,
 } from '@/hooks/useProducts';
 import { useAllCategories, useCreateCategory } from '@/hooks/useCategories';
+import { useSettings, useUpdateSetting } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/use-toast';
 import { ImageUploader } from './ImageUploader';
 import { formatSchedule } from '@/lib/schedule';
-
+ 
 const DAYS = [
   { value: 1, label: 'Lun' },
   { value: 2, label: 'Mar' },
@@ -29,7 +29,7 @@ const DAYS = [
   { value: 6, label: 'Sáb' },
   { value: 0, label: 'Dom' },
 ];
-
+ 
 const defaultProductForm = {
   name: '', description: '', price: '', category_id: '',
   is_available: true, show_in_display: true, is_featured: false, is_cross_sell: false, display_order: 0, image_url: '',
@@ -40,28 +40,34 @@ const defaultProductForm = {
   has_sizes: false,
   price_large: '',
 };
-
+ 
 const defaultPromoForm = {
   title: '', description: '',
   discount_type: 'price' as Promotion['discount_type'],
   discount_value: '', badge_text: '', image_url: '', is_active: true, display_order: 0,
 };
-
+ 
 export function ProductManager() {
   // ── Product state ──
   const [productOpen, setProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productForm, setProductForm] = useState(defaultProductForm);
-
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+ 
   // ── Category modal state ──
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-
+ 
   // ── Promotion state ──
   const [promoOpen, setPromoOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null);
   const [promoForm, setPromoForm] = useState(defaultPromoForm);
-
+ 
+  // ── Display interval state ──
+  const { data: settings } = useSettings();
+  const updateSetting = useUpdateSetting();
+  const [intervalInput, setIntervalInput] = useState<string>('');
+ 
   // ── Data ──
   const { data: products = [] } = useAllProducts();
   const { data: categories = [] } = useAllCategories();
@@ -74,10 +80,49 @@ export function ProductManager() {
   const updatePromotion = useUpdatePromotion();
   const deletePromotion = useDeletePromotion();
   const { toast } = useToast();
-
+ 
+  // ── Productos agrupados por categoría ──
+  const productsByCategory = useMemo(() => {
+    const withCategory = categories.map(cat => ({
+      category: cat,
+      products: products.filter(p => p.category_id === cat.id),
+    })).filter(g => g.products.length > 0);
+ 
+    const uncategorized = products.filter(p => !p.category_id);
+    return [
+      ...withCategory,
+      ...(uncategorized.length > 0
+        ? [{ category: { id: '__none__', name: 'Sin categoría', description: null, display_order: 9999, is_active: true, created_at: '' }, products: uncategorized }]
+        : []),
+    ];
+  }, [categories, products]);
+ 
+  // ── Toggle colapso de categoría ──
+  const toggleCollapse = (catId: string) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      next.has(catId) ? next.delete(catId) : next.add(catId);
+      return next;
+    });
+  };
+ 
+  // ── Bulk actions por categoría ──
+  const bulkUpdate = async (catId: string, field: 'is_available' | 'show_in_display', value: boolean) => {
+    const group = productsByCategory.find(g => g.category.id === catId);
+    if (!group) return;
+    try {
+      await Promise.all(
+        group.products.map(p => updateProduct.mutateAsync({ id: p.id, [field]: value }))
+      );
+      toast({ title: `Categoría actualizada` });
+    } catch {
+      toast({ title: 'Error', description: 'No se pudo actualizar la categoría', variant: 'destructive' });
+    }
+  };
+ 
   // ── Product helpers ──
   const resetProductForm = () => { setProductForm(defaultProductForm); setEditingProduct(null); };
-
+ 
   const toggleDay = (day: number) => {
     setProductForm(prev => ({
       ...prev,
@@ -86,7 +131,7 @@ export function ProductManager() {
         : [...prev.available_days, day],
     }));
   };
-
+ 
   const openEditProduct = (product: Product) => {
     setEditingProduct(product);
     const hasSchedule = !!(product.available_days || product.available_from || product.available_to);
@@ -110,7 +155,7 @@ export function ProductManager() {
     });
     setProductOpen(true);
   };
-
+ 
   const handleProductSubmit = async () => {
     if (!productForm.name.trim() || !productForm.price) {
       toast({ title: 'Error', description: 'Nombre y precio son requeridos', variant: 'destructive' });
@@ -148,7 +193,7 @@ export function ProductManager() {
       toast({ title: 'Error', description: 'No se pudo guardar el producto', variant: 'destructive' });
     }
   };
-
+ 
   const handleDeleteProduct = async (id: string) => {
     if (!confirm('¿Eliminar este producto?')) return;
     try {
@@ -158,7 +203,7 @@ export function ProductManager() {
       toast({ title: 'Error', description: 'No se pudo eliminar el producto', variant: 'destructive' });
     }
   };
-
+ 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
     try {
@@ -171,13 +216,31 @@ export function ProductManager() {
       toast({ title: 'Error', description: 'No se pudo crear la categoría', variant: 'destructive' });
     }
   };
-
+ 
   const getCategoryName = (categoryId: string | null) =>
     categories.find(c => c.id === categoryId)?.name || 'Sin categoría';
-
+ 
+  // ── Display interval ──
+  const currentInterval = settings?.display_interval_seconds ?? 8;
+ 
+  const handleSaveInterval = async () => {
+    const val = parseInt(intervalInput);
+    if (isNaN(val) || val < 3 || val > 60) {
+      toast({ title: 'Error', description: 'El intervalo debe ser entre 3 y 60 segundos', variant: 'destructive' });
+      return;
+    }
+    try {
+      await updateSetting.mutateAsync({ key: 'display_interval_seconds', value: val });
+      setIntervalInput('');
+      toast({ title: 'Intervalo actualizado', description: `El display cambiará cada ${val} segundos` });
+    } catch {
+      toast({ title: 'Error', description: 'No se pudo guardar el intervalo', variant: 'destructive' });
+    }
+  };
+ 
   // ── Promotion helpers ──
   const resetPromoForm = () => { setPromoForm(defaultPromoForm); setEditingPromo(null); };
-
+ 
   const openEditPromo = (promo: Promotion) => {
     setEditingPromo(promo);
     setPromoForm({
@@ -192,7 +255,7 @@ export function ProductManager() {
     });
     setPromoOpen(true);
   };
-
+ 
   const handlePromoSubmit = async () => {
     if (!promoForm.title.trim()) {
       toast({ title: 'Error', description: 'El título es requerido', variant: 'destructive' });
@@ -222,7 +285,7 @@ export function ProductManager() {
       toast({ title: 'Error', description: 'No se pudo guardar la promoción', variant: 'destructive' });
     }
   };
-
+ 
   const handleDeletePromo = async (id: string) => {
     if (!confirm('¿Eliminar esta promoción?')) return;
     try {
@@ -232,24 +295,27 @@ export function ProductManager() {
       toast({ title: 'Error', description: 'No se pudo eliminar la promoción', variant: 'destructive' });
     }
   };
-
+ 
   const formatDiscount = (promo: Promotion) => {
     if (promo.discount_type === 'price' && promo.discount_value) return `$${promo.discount_value.toFixed(2)}`;
     return promo.badge_text || '—';
   };
-
+ 
   return (
     <>
       <Tabs defaultValue="products" className="space-y-4">
-        <TabsList className="grid w-full max-w-xs grid-cols-2">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="products" className="flex items-center gap-2">
             <Coffee className="w-4 h-4" />Productos
           </TabsTrigger>
           <TabsTrigger value="promotions" className="flex items-center gap-2">
             <Tag className="w-4 h-4" />Promociones
           </TabsTrigger>
+          <TabsTrigger value="display" className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4" />Display
+          </TabsTrigger>
         </TabsList>
-
+ 
         {/* ── PRODUCTOS ── */}
         <TabsContent value="products" className="space-y-4">
           <div className="flex items-center justify-between">
@@ -273,7 +339,7 @@ export function ProductManager() {
                       onImageChange={(url) => setProductForm({ ...productForm, image_url: url || '' })}
                     />
                   </div>
-
+ 
                   {/* Name */}
                   <div className="space-y-2">
                     <Label>Nombre *</Label>
@@ -283,7 +349,7 @@ export function ProductManager() {
                       onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
                     />
                   </div>
-
+ 
                   {/* Description */}
                   <div className="space-y-2">
                     <Label>Descripción</Label>
@@ -293,7 +359,7 @@ export function ProductManager() {
                       onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                     />
                   </div>
-
+ 
                   {/* Price + Category */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -327,7 +393,7 @@ export function ProductManager() {
                       </div>
                     </div>
                   </div>
-
+ 
                   {/* Disponible */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                     <div>
@@ -339,7 +405,7 @@ export function ProductManager() {
                       onCheckedChange={(v) => setProductForm({ ...productForm, is_available: v })}
                     />
                   </div>
-
+ 
                   {/* Display */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                     <div>
@@ -354,7 +420,7 @@ export function ProductManager() {
                       onCheckedChange={(v) => setProductForm({ ...productForm, show_in_display: v })}
                     />
                   </div>
-
+ 
                   {/* Featured */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                     <div>
@@ -369,7 +435,7 @@ export function ProductManager() {
                       onCheckedChange={(v) => setProductForm({ ...productForm, is_featured: v })}
                     />
                   </div>
-
+ 
                   {/* Cross-sell */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                     <div>
@@ -384,7 +450,7 @@ export function ProductManager() {
                       onCheckedChange={(v) => setProductForm({ ...productForm, is_cross_sell: v })}
                     />
                   </div>
-
+ 
                   {/* Sizes */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                     <div>
@@ -408,7 +474,7 @@ export function ProductManager() {
                       />
                     </div>
                   )}
-
+ 
                   {/* Schedule toggle */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                     <div>
@@ -423,8 +489,7 @@ export function ProductManager() {
                       onCheckedChange={(v) => setProductForm({ ...productForm, use_schedule: v })}
                     />
                   </div>
-
-                  {/* Schedule fields */}
+ 
                   {productForm.use_schedule && (
                     <div className="space-y-4 p-3 rounded-lg border border-border bg-background">
                       <div className="space-y-2">
@@ -463,7 +528,7 @@ export function ProductManager() {
                       </div>
                     </div>
                   )}
-
+ 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" className="flex-1"
@@ -478,63 +543,120 @@ export function ProductManager() {
               </DialogContent>
             </Dialog>
           </div>
-
-          {/* Product list */}
-          <div className="space-y-2">
-            {products.map((product) => {
-              const scheduleLabel = formatSchedule(product);
+ 
+          {/* ── LISTA AGRUPADA POR CATEGORÍA ── */}
+          <div className="space-y-3">
+            {productsByCategory.map(({ category, products: catProducts }) => {
+              const isCollapsed = collapsedCategories.has(category.id);
+              const allAvailable = catProducts.every(p => p.is_available);
+              const allInDisplay = catProducts.every(p => p.show_in_display);
+ 
               return (
-                <div key={product.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border">
-                  <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Coffee className="w-5 h-5 text-muted-foreground" />
+                <div key={category.id} className="rounded-lg border bg-card overflow-hidden">
+                  {/* Category header */}
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-secondary/40">
+                    <button
+                      onClick={() => toggleCollapse(category.id)}
+                      className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                    >
+                      {isCollapsed
+                        ? <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      }
+                      <span className="font-semibold text-sm truncate">{category.name}</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">({catProducts.length})</span>
+                    </button>
+ 
+                    {/* Bulk actions */}
+                    {category.id !== '__none__' && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => bulkUpdate(category.id, 'is_available', !allAvailable)}
+                          title={allAvailable ? 'Marcar categoría no disponible' : 'Marcar categoría disponible'}
+                          className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors hover:bg-secondary"
+                        >
+                          {allAvailable
+                            ? <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                            : <XCircle className="w-3.5 h-3.5 text-destructive" />
+                          }
+                          <span className="text-muted-foreground hidden sm:inline">
+                            {allAvailable ? 'Disponible' : 'No disponible'}
+                          </span>
+                        </button>
+ 
+                        <button
+                          onClick={() => bulkUpdate(category.id, 'show_in_display', !allInDisplay)}
+                          title={allInDisplay ? 'Ocultar del display' : 'Mostrar en display'}
+                          className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors hover:bg-secondary"
+                        >
+                          {allInDisplay
+                            ? <Eye className="w-3.5 h-3.5 text-blue-500" />
+                            : <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
+                          }
+                          <span className="text-muted-foreground hidden sm:inline">Display</span>
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium truncate">{product.name}</p>
-                      {!product.is_available && (
-                        <Badge variant="destructive" className="text-xs">No disponible</Badge>
-                      )}
-                      {product.show_in_display && (
-                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                          <Monitor className="w-3 h-3" />Display
-                        </Badge>
-                      )}
-                      {product.is_featured && (
-                        <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-200">
-                          ⭐ Destacado
-                        </Badge>
-                      )}
-                      {product.is_cross_sell && (
-                        <Badge className="text-xs bg-blue-50 text-blue-600 border-blue-200">
-                          🛒 Venta cruzada
-                        </Badge>
-                      )}
+ 
+                  {/* Products in category */}
+                  {!isCollapsed && (
+                    <div className="divide-y divide-border/50">
+                      {catProducts.map((product) => {
+                        const scheduleLabel = formatSchedule(product);
+                        return (
+                          <div key={product.id} className="flex items-center gap-3 p-3">
+                            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {product.image_url ? (
+                                <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
+                              ) : (
+                                <Coffee className="w-5 h-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium truncate">{product.name}</p>
+                                {!product.is_available && (
+                                  <Badge variant="destructive" className="text-xs">No disponible</Badge>
+                                )}
+                                {product.show_in_display && (
+                                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                    <Monitor className="w-3 h-3" />Display
+                                  </Badge>
+                                )}
+                                {product.is_featured && (
+                                  <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-200">
+                                    ⭐ Destacado
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                ${product.price.toFixed(2)}
+                                {product.has_sizes && product.price_large != null && ` / $${product.price_large.toFixed(2)}`}
+                              </p>
+                              {scheduleLabel && (
+                                <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-0.5">
+                                  <Clock className="w-3 h-3" />{scheduleLabel}
+                                </p>
+                              )}
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => openEditProduct(product)}>
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      ${product.price.toFixed(2)} · {getCategoryName(product.category_id)}
-                    </p>
-                    {scheduleLabel && (
-                      <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3" />{scheduleLabel}
-                      </p>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => openEditProduct(product)}>
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  )}
                 </div>
               );
             })}
           </div>
         </TabsContent>
-
+ 
         {/* ── PROMOCIONES ── */}
         <TabsContent value="promotions" className="space-y-4">
           <div className="flex items-center justify-between">
@@ -587,8 +709,7 @@ export function ProductManager() {
                     {promoForm.discount_type !== 'text' && (
                       <div className="space-y-2">
                         <Label>Precio</Label>
-                        <Input type="number" step="0.01"
-                          placeholder="0.00"
+                        <Input type="number" step="0.01" placeholder="0.00"
                           value={promoForm.discount_value}
                           onChange={(e) => setPromoForm({ ...promoForm, discount_value: e.target.value })}
                         />
@@ -621,7 +742,7 @@ export function ProductManager() {
               </DialogContent>
             </Dialog>
           </div>
-
+ 
           {promotions.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Tag className="w-10 h-10 mx-auto mb-3 opacity-40" />
@@ -656,8 +777,58 @@ export function ProductManager() {
             </div>
           )}
         </TabsContent>
+ 
+        {/* ── CONFIGURACIÓN DISPLAY ── */}
+        <TabsContent value="display" className="space-y-4">
+          <h2 className="font-display text-xl font-bold">Configuración del Display</h2>
+ 
+          <div className="rounded-lg border bg-card p-5 space-y-4">
+            <div>
+              <h3 className="font-semibold flex items-center gap-2 mb-1">
+                <Monitor className="w-4 h-4 text-blue-500" />
+                Tiempo entre diapositivas
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Cada cuántos segundos cambia de categoría en la pantalla del local. Actualmente: <strong>{currentInterval} segundos</strong>.
+              </p>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 space-y-1.5">
+                  <Label>Nuevo intervalo (3–60 segundos)</Label>
+                  <Input
+                    type="number"
+                    min={3}
+                    max={60}
+                    placeholder={currentInterval.toString()}
+                    value={intervalInput}
+                    onChange={(e) => setIntervalInput(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleSaveInterval} disabled={updateSetting.isPending || !intervalInput}>
+                  Guardar
+                </Button>
+              </div>
+ 
+              {/* Quick presets */}
+              <div className="flex gap-2 mt-3 flex-wrap">
+                {[5, 8, 10, 15, 20, 30].map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setIntervalInput(s.toString())}
+                    className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                      currentInterval === s
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    {s}s
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
-
+ 
       {/* ── MODAL CREAR CATEGORÍA ── */}
       <Dialog open={categoryModalOpen} onOpenChange={setCategoryModalOpen}>
         <DialogContent className="max-w-sm">
