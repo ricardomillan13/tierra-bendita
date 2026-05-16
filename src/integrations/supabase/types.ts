@@ -134,6 +134,8 @@ export type Database = {
           id: string
           notes: string | null
           order_number: number
+          seller_id: string | null
+          source: string
           status: string
           total: number
           updated_at: string
@@ -147,6 +149,8 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: number
+          seller_id?: string | null
+          source?: string
           status?: string
           total?: number
           updated_at?: string
@@ -160,6 +164,8 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: number
+          seller_id?: string | null
+          source?: string
           status?: string
           total?: number
           updated_at?: string
@@ -280,6 +286,57 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_inventory: {
+        Row: {
+          id: string
+          seller_id: string
+          product_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          seller_id: string
+          product_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          seller_id?: string
+          product_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sellers: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           id: string
@@ -336,7 +393,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "seller"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -464,7 +521,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "seller"],
     },
   },
 } as const

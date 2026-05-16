@@ -33,6 +33,7 @@ export interface CartItem {
   product: Product;
   quantity: number;
   size?: 'medium' | 'large';  // only set when product.has_sizes = true
+  extras?: { whippedCream: boolean };
 }
 
 export interface Order {

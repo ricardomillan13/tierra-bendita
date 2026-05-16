@@ -15,7 +15,7 @@ const authSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, signIn, signUp, loading: authLoading } = useAuth();
+  const { user, isAdmin, isSeller, signIn, signUp, loading: authLoading } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,9 +24,13 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/pos');
+      if (isSeller && !isAdmin) {
+        navigate('/sales');
+      } else {
+        navigate('/pos');
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, isAdmin, isSeller, authLoading, navigate]);
 
   const validateForm = () => {
     try {
@@ -55,7 +59,7 @@ export default function Auth() {
     setLoading(false);
     
     if (!error) {
-      navigate('/pos');
+      // Redirect happens via useEffect once roles are loaded
     }
   };
 
@@ -68,7 +72,7 @@ export default function Auth() {
     setLoading(false);
     
     if (!error) {
-      navigate('/pos');
+      // Redirect happens via useEffect once roles are loaded
     }
   };
 

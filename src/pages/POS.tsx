@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Coffee, ClipboardList, Package, Monitor, DollarSign, LogOut, Loader2, History } from 'lucide-react';
+import { Coffee, ClipboardList, Package, Monitor, DollarSign, LogOut, Loader2, History, Users, BarChart2, UserCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderCard } from '@/components/pos/OrderCard';
 import { OrderHistory } from '@/components/pos/OrderHistory';
@@ -12,6 +12,8 @@ import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings, useUpdateSetting } from '@/hooks/useSettings';
 import { Link } from 'react-router-dom';
+import { SellersPanel } from '@/components/pos/SellersPanel';
+import { UsersPanel } from '@/components/pos/UsersPanel';
 import { Button } from '@/components/ui/button';
 
 export default function POS() {
@@ -92,6 +94,12 @@ export default function POS() {
                 Display
               </Button>
             </Link>
+            <Link to="/sales">
+              <Button variant="secondary" size="sm">
+                <DollarSign className="w-4 h-4 mr-1" />
+                Ventas
+              </Button>
+            </Link>
             <Link to="/menu">
               <Button variant="secondary" size="sm">
                 Ver Menú
@@ -106,7 +114,7 @@ export default function POS() {
 
       <main className="max-w-7xl mx-auto p-4">
         <Tabs defaultValue="orders" className="space-y-4">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsList className="grid w-full max-w-3xl grid-cols-6">
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4" />
               Pedidos
@@ -119,6 +127,14 @@ export default function POS() {
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Productos
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4" />
+              Usuarios
+            </TabsTrigger>
+            <TabsTrigger value="sellers" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Vendedores
             </TabsTrigger>
             <TabsTrigger value="cash" className="flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
@@ -183,6 +199,14 @@ export default function POS() {
 
           <TabsContent value="products">
             <ProductManager />
+          </TabsContent>
+
+          <TabsContent value="users">
+            <UsersPanel />
+          </TabsContent>
+
+          <TabsContent value="sellers">
+            <SellersPanel />
           </TabsContent>
 
           <TabsContent value="cash">

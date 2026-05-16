@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Coffee, Clock, X, ChevronDown } from 'lucide-react';
 import { Product } from '@/types/menu';
 import { isProductAvailableNow, formatSchedule } from '@/lib/schedule';
+import { useToast } from '@/hooks/use-toast';
 
 const GOLD     = '#c9a84c';
 const GOLD_DIM = 'rgba(201,168,76,0.5)';
@@ -22,6 +23,7 @@ function ProductModal({ product, onClose, onAdd }: {
 }) {
   const [selectedSize, setSelectedSize] = useState<'medium' | 'large'>('medium');
   const [whippedCream, setWhippedCream] = useState(false);
+  const { toast } = useToast();
 
   const isFrappe = product.category_id === FRAPPE_CATEGORY_ID;
 
@@ -33,6 +35,13 @@ function ProductModal({ product, onClose, onAdd }: {
   const handleAdd = () => {
     onAdd(product, product.has_sizes ? selectedSize : undefined, isFrappe ? { whippedCream } : undefined);
     onClose();
+    const sizeLabel = product.has_sizes ? (selectedSize === 'large' ? ' Grande' : ' Mediano') : '';
+    const extrasLabel = isFrappe && whippedCream ? ' + crema batida' : '';
+    toast({
+      title: '¡Agregado al carrito! 🛒',
+      description: `${product.name}${sizeLabel}${extrasLabel}`,
+      duration: 2000,
+    });
   };
 
   return (
@@ -153,13 +162,115 @@ function ProductModal({ product, onClose, onAdd }: {
   );
 }
 
+// Alert de crema batida para frappes agregados desde la lista sin abrir modal
+function WhippedCreamAlert({ product, onConfirm, onDismiss }: {
+  product: Product;
+  onConfirm: (withCream: boolean) => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center p-4 pb-8" onClick={onDismiss}>
+      <div
+        className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-slide-up"
+        style={{ background: '#1a0a02', border: '1px solid rgba(201,168,76,0.2)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-5 pt-5 pb-5">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: GOLD_DIM }}>
+            {product.name}
+          </p>
+          <h3 className="font-bold text-lg text-white mb-1">¿Le agregamos crema batida? 🍦</h3>
+          <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            +$6.00 · Solo para este frappe
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => onConfirm(false)}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-95"
+              style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)' }}
+            >
+              Sin crema
+            </button>
+            <button
+              onClick={() => onConfirm(true)}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-95"
+              style={{ background: GOLD, color: DARK }}
+            >
+              Con crema batida
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardProps) {
   const [showSizes, setShowSizes] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showWhippedCreamAlert, setShowWhippedCreamAlert] = useState(false);
+  const { toast } = useToast();
 
   const scheduleAvailable = isProductAvailableNow(product);
   const isUnavailable = !storeOpen || !product.is_available || !scheduleAvailable;
   const scheduleLabel = formatSchedule(product);
+  const isFrappe = product.category_id === FRAPPE_CATEGORY_ID;
+
+  // Called when user selects a size from the inline size selector
+  const handleSizeSelect = (size: 'medium' | 'large') => {
+    if (isFrappe) {
+      // For frappes, show whipped cream alert first then add
+      setShowSizes(false);
+      // We'll store the size temporarily via a closure in the alert handler
+      const handleCreamChoice = (withCream: boolean) => {
+        onAdd(product, size, { whippedCream: withCream });
+        setShowWhippedCreamAlert(false);
+        const sizeLabel = size === 'large' ? ' Grande' : ' Mediano';
+        const extrasLabel = withCream ? ' + crema batida' : '';
+        toast({
+          title: '¡Agregado al carrito! 🛒',
+          description: `${product.name}${sizeLabel}${extrasLabel}`,
+          duration: 2000,
+        });
+      };
+      // Store handler ref temporarily — use modal approach instead
+      setShowModal(true);
+    } else {
+      onAdd(product, size);
+      setShowSizes(false);
+      toast({
+        title: '¡Agregado al carrito! 🛒',
+        description: `${product.name} · ${size === 'large' ? 'Grande' : 'Mediano'}`,
+        duration: 2000,
+      });
+    }
+  };
+
+  // Called when + button is pressed on a non-size, non-frappe product
+  const handleDirectAdd = () => {
+    if (isUnavailable) return;
+    if (isFrappe) {
+      setShowWhippedCreamAlert(true);
+      return;
+    }
+    onAdd(product);
+    toast({
+      title: '¡Agregado al carrito! 🛒',
+      description: product.name,
+      duration: 2000,
+    });
+  };
+
+  const handleWhippedCreamConfirm = (withCream: boolean) => {
+    onAdd(product, undefined, { whippedCream: withCream });
+    setShowWhippedCreamAlert(false);
+    const extrasLabel = withCream ? ' + crema batida' : '';
+    toast({
+      title: '¡Agregado al carrito! 🛒',
+      description: `${product.name}${extrasLabel}`,
+      duration: 2000,
+    });
+  };
 
   return (
     <>
@@ -181,7 +292,7 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
             )}
           </button>
 
-          {/* Info — nombre clickable para abrir modal */}
+          {/* Info */}
           <div className="flex-1 min-w-0">
             <button
               onClick={() => !isUnavailable && setShowModal(true)}
@@ -205,7 +316,15 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
           {/* Price + action */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
             {product.has_sizes ? (
-              <span className="text-xs" style={{ color: `${GOLD}80` }}>Ver tamaños</span>
+              // "Ver tamaños" is now a clickable button
+              <button
+                disabled={isUnavailable}
+                onClick={() => !isUnavailable && setShowSizes(p => !p)}
+                className="text-xs underline underline-offset-2 transition-colors disabled:opacity-30"
+                style={{ color: showSizes ? GOLD : GOLD_DIM }}
+              >
+                Ver tamaños
+              </button>
             ) : (
               <span className="font-bold text-sm" style={{ color: GOLD }}>
                 ${product.price.toFixed(2)}
@@ -216,7 +335,7 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
               onClick={() => {
                 if (isUnavailable) return;
                 if (product.has_sizes) { setShowSizes(p => !p); return; }
-                onAdd(product);
+                handleDirectAdd();
               }}
               className="w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-30 active:scale-95"
               style={{ background: showSizes ? 'rgba(201,168,76,0.15)' : GOLD, color: showSizes ? GOLD : DARK }}
@@ -233,7 +352,7 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
         {product.has_sizes && showSizes && (
           <div className="flex gap-2 pb-3 pl-[68px] animate-slide-up">
             <button
-              onClick={() => { onAdd(product, 'medium'); setShowSizes(false); }}
+              onClick={() => handleSizeSelect('medium')}
               className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all"
               style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
             >
@@ -241,7 +360,7 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
             </button>
             {product.price_large != null && (
               <button
-                onClick={() => { onAdd(product, 'large'); setShowSizes(false); }}
+                onClick={() => handleSizeSelect('large')}
                 className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all"
                 style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
               >
@@ -254,7 +373,31 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
         <div className="h-px mx-1" style={{ background: 'rgba(255,255,255,0.05)' }} />
       </div>
 
-      {showModal && <ProductModal product={product} onClose={() => setShowModal(false)} onAdd={onAdd} />}
+      {showModal && (
+        <ProductModal
+          product={product}
+          onClose={() => setShowModal(false)}
+          onAdd={(p, size, extras) => {
+            onAdd(p, size, extras);
+            setShowModal(false);
+            const sizeLabel = size ? (size === 'large' ? ' Grande' : ' Mediano') : '';
+            const extrasLabel = extras?.whippedCream ? ' + crema batida' : '';
+            toast({
+              title: '¡Agregado al carrito! 🛒',
+              description: `${p.name}${sizeLabel}${extrasLabel}`,
+              duration: 2000,
+            });
+          }}
+        />
+      )}
+
+      {showWhippedCreamAlert && (
+        <WhippedCreamAlert
+          product={product}
+          onConfirm={handleWhippedCreamConfirm}
+          onDismiss={() => setShowWhippedCreamAlert(false)}
+        />
+      )}
     </>
   );
 }

@@ -35,9 +35,9 @@ export default function Menu() {
     [products]
   );
 
-  const handleAddItem = useCallback((product: Product, size?: 'medium' | 'large') => {
+  const handleAddItem = useCallback((product: Product, size?: 'medium' | 'large', extras?: { whippedCream: boolean }) => {
     if (!isOpen) return;
-    cart.addItem(product, size);
+    cart.addItem(product, size, extras);
     if (!product.is_cross_sell && crossSellProducts.length > 0) {
       const unseen = crossSellProducts.filter(p => !shownSuggestionsRef.current.has(p.id));
       const pool = unseen.length > 0 ? unseen : crossSellProducts;

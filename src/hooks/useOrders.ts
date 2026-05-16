@@ -178,14 +178,18 @@ export function useCreateOrder() {
         .single();
       if (orderError) throw orderError;
 
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.product.id.startsWith('promo_') ? null : item.product.id,
-        product_name: item.product.name,
-        quantity: item.quantity,
-        unit_price: item.product.price,
-        subtotal: item.product.price * item.quantity,
-      }));
+      const orderItems = items.map(item => {
+        const sizeLabel = item.size === 'large' ? ' (Grande)' : item.size === 'medium' ? ' (Mediano)' : '';
+        const extrasLabel = item.extras?.whippedCream ? ' + Crema batida' : '';
+        return {
+          order_id: order.id,
+          product_id: item.product.id.startsWith('promo_') ? null : item.product.id,
+          product_name: `${item.product.name}${sizeLabel}${extrasLabel}`,
+          quantity: item.quantity,
+          unit_price: item.product.price,
+          subtotal: item.product.price * item.quantity,
+        };
+      });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
       return order as Order;

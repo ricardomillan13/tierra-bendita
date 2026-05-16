@@ -153,10 +153,15 @@ export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onCl
                   >
                     <div className="flex-1">
                       <p className="font-medium">{item.product.name}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground flex flex-wrap gap-1 items-center">
                         {item.product.has_sizes && item.size && (
-                          <span className="mr-1.5 px-1.5 py-0.5 rounded bg-muted text-xs font-medium">
+                          <span className="px-1.5 py-0.5 rounded bg-muted text-xs font-medium">
                             {item.size === 'medium' ? 'Mediano' : 'Grande'}
+                          </span>
+                        )}
+                        {item.extras?.whippedCream && (
+                          <span className="px-1.5 py-0.5 rounded bg-muted text-xs font-medium">
+                            🍦 Con crema
                           </span>
                         )}
                         ${item.product.price.toFixed(2)} c/u

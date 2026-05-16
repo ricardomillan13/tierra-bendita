@@ -8,6 +8,8 @@ import Menu from "./pages/Menu";
 import POS from "./pages/POS";
 import Display from "./pages/Display";
 import Auth from "./pages/Auth";
+import Sales from "./pages/Sales";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -21,6 +23,8 @@ const App = () => (
         <Route path="/pos" element={<POS />} />
         <Route path="/display" element={<Display />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/sales" element={<Sales />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
