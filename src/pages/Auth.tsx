@@ -4,7 +4,6 @@ import { Coffee, Mail, Lock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { z } from 'zod';
 
@@ -15,22 +14,22 @@ const authSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, isAdmin, isSeller, signIn, signUp, loading: authLoading } = useAuth();
+  const { user, isAdmin, isSeller, rolesReady, signIn, loading: authLoading } = useAuth();
   
-  const [email, setEmail] = useState('');
+  const [email, setEmail]   = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loading, setLoading]   = useState(false);
+  const [errors, setErrors]     = useState<{ email?: string; password?: string }>({});
 
   useEffect(() => {
-    if (user && !authLoading) {
-      if (isSeller && !isAdmin) {
-        navigate('/sales');
-      } else {
-        navigate('/pos');
-      }
+    if (!rolesReady) return;
+    if (!user) return;
+    if (isSeller && !isAdmin) {
+      navigate('/sales');
+    } else if (isAdmin) {
+      navigate('/pos');
     }
-  }, [user, isAdmin, isSeller, authLoading, navigate]);
+  }, [user, isAdmin, isSeller, rolesReady, navigate]);
 
   const validateForm = () => {
     try {
@@ -53,27 +52,9 @@ export default function Auth() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
     setLoading(true);
-    const { error } = await signIn(email, password);
+    await signIn(email, password);
     setLoading(false);
-    
-    if (!error) {
-      // Redirect happens via useEffect once roles are loaded
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    
-    setLoading(true);
-    const { error } = await signUp(email, password);
-    setLoading(false);
-    
-    if (!error) {
-      // Redirect happens via useEffect once roles are loaded
-    }
   };
 
   if (authLoading) {
@@ -88,122 +69,56 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-espresso via-coffee-dark to-espresso p-4">
       <div className="w-full max-w-md">
         <div className="glass-card rounded-2xl p-8 shadow-strong">
-          {/* Logo */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center mb-4">
               <Coffee className="w-10 h-10 text-primary" />
             </div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Tierra Bendita Chocolate & Coffee Shop</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Tierra Bendita Chocolate & Coffee Shop
+            </h1>
             <p className="text-muted-foreground mt-1">Panel de Administración</p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-              <TabsTrigger value="register">Registrarse</TabsTrigger>
-            </TabsList>
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@tierrabenditacafe.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+            </div>
 
-            <TabsContent value="login">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-login">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email-login"
-                      type="email"
-                      placeholder="admin@tierrabenditacafe.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password-login">Contraseña</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password-login"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+            </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Iniciar Sesión
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="register">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-register">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email-register"
-                      type="email"
-                      placeholder="admin@tierrabenditacafe.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password-register">Contraseña</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password-register"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
-                </div>
-
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Crear Cuenta
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Al registrarte, necesitarás que un administrador te asigne permisos.
-          </p>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Iniciar Sesión
+            </Button>
+          </form>
         </div>
       </div>
     </div>
   );
 }
-
