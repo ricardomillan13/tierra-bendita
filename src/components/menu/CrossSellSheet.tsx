@@ -83,8 +83,8 @@ export function CrossSellSheet({ suggestion, onAdd, onDismiss }: CrossSellSheetP
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Coffee className="w-8 h-8 text-coffee-medium/40" />
+                  <div className="w-full h-full flex items-center justify-center p-3">
+                    <img src="/logo.png" alt={suggestion.name} className="w-full h-full object-contain rounded-full opacity-70" />
                   </div>
                 )}
               </div>

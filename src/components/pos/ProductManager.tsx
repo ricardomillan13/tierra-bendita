@@ -610,7 +610,7 @@ export function ProductManager() {
                               {product.image_url ? (
                                 <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
                               ) : (
-                                <Coffee className="w-5 h-5 text-muted-foreground" />
+                                <img src="/logo.png" alt={product.name} className="w-full h-full object-contain rounded-full opacity-70 p-1" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">

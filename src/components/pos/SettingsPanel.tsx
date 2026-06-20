@@ -79,7 +79,7 @@ export function SettingsPanel() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="secondary" size="sm">
           <Settings className="w-4 h-4 mr-2" />
           Configuración
         </Button>

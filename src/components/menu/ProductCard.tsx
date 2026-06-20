@@ -59,8 +59,8 @@ function ProductModal({ product, onClose, onAdd }: {
             {product.image_url ? (
               <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Coffee className="w-16 h-16" style={{ color: `${GOLD}30` }} />
+              <div className="w-full h-full flex items-center justify-center p-8">
+                <img src="/logo.png" alt={product.name} className="w-full h-full object-contain rounded-full opacity-70" />
               </div>
             )}
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #1a0a02 0%, transparent 50%)' }} />
@@ -286,8 +286,8 @@ export function ProductCard({ product, onAdd, storeOpen = true }: ProductCardPro
             {product.image_url ? (
               <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Coffee className="w-6 h-6" style={{ color: `${GOLD}55` }} />
+              <div className="w-full h-full flex items-center justify-center p-2">
+                <img src="/logo.png" alt={product.name} className="w-full h-full object-contain rounded-full opacity-70" />
               </div>
             )}
           </button>

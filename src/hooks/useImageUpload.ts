@@ -37,7 +37,7 @@ export function useImageUpload() {
       const { data, error } = await supabase.storage
         .from('product-images')
         .upload(fileName, file, {
-          cacheControl: '3600',
+          cacheControl: '604800', // 1 semana — el nombre de archivo siempre es nuevo (timestamp), así que no hay riesgo de servir una imagen vieja
           upsert: false,
         });
       

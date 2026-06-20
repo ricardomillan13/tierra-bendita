@@ -185,7 +185,7 @@ function InventoryManager() {
                   <div className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden bg-secondary flex items-center justify-center">
                     {product.image_url
                       ? <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
-                      : <Package className="w-5 h-5 text-muted-foreground/40" />
+                      : <img src="/logo.png" alt={product.name} className="w-full h-full object-contain rounded-full opacity-70 p-1" />
                     }
                   </div>
 

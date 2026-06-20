@@ -52,7 +52,7 @@ export function QRCodeDisplay({ menuUrl, showButton = true, size = 200, classNam
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="secondary" size="sm">
             <QrCode className="w-4 h-4 mr-2" />
             Código QR
           </Button>

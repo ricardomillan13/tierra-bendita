@@ -32,9 +32,9 @@ function FeaturedModal({ product, onClose, onAdd }: { product: Product; onClose:
             {product.image_url ? (
               <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center"
+              <div className="w-full h-full flex items-center justify-center p-10"
                 style={{ background: 'linear-gradient(135deg, #3d2010, #5c3418)' }}>
-                <Coffee className="w-16 h-16" style={{ color: 'rgba(201,168,76,0.2)' }} />
+                <img src="/logo.png" alt={product.name} className="w-full h-full object-contain rounded-full opacity-70" />
               </div>
             )}
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #1a0a02 0%, transparent 50%)' }} />
@@ -99,9 +99,9 @@ export function FeaturedCard({ product, onAdd, storeOpen = true }: FeaturedCardP
           {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center"
+            <div className="w-full h-full flex items-center justify-center p-6"
               style={{ background: 'linear-gradient(135deg, #3d2010, #5c3418)' }}>
-              <Coffee className="w-10 h-10" style={{ color: '#c9a84c30' }} />
+              <img src="/logo.png" alt={product.name} className="w-full h-full object-contain rounded-full opacity-70" />
             </div>
           )}
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #1a0a02 0%, transparent 60%)' }} />

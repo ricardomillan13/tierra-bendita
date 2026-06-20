@@ -148,7 +148,7 @@ export default function Display() {
                           {product.image_url ? (
                             <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
                           ) : (
-                            <Coffee className="w-16 h-16 opacity-50" />
+                            <img src="/logo.png" alt={product.name} className="w-2/3 h-2/3 object-contain rounded-full opacity-70" />
                           )}
                         </div>
                         <h3 className="font-display text-xl font-semibold text-center mb-2">{product.name}</h3>
