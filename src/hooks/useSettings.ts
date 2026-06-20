@@ -8,6 +8,9 @@ interface Settings {
   is_open: boolean;
   closed_message: string;
   display_interval_seconds: number;
+  auto_schedule_enabled: boolean;
+  auto_close_time: string;
+  auto_open_time: string;
 }
 
 export function useSettings() {
@@ -27,6 +30,9 @@ export function useSettings() {
         is_open: true,
         closed_message: 'Estamos cerrados por el momento, pronto regresamos.',
         display_interval_seconds: 8,
+        auto_schedule_enabled: false,
+        auto_close_time: '23:00',
+        auto_open_time: '12:00',
       };
 
       data?.forEach(row => {
@@ -42,6 +48,12 @@ export function useSettings() {
           settings.closed_message = row.value as string;
         } else if (row.key === 'display_interval_seconds') {
           settings.display_interval_seconds = row.value as number;
+        } else if (row.key === 'auto_schedule_enabled') {
+          settings.auto_schedule_enabled = row.value as boolean;
+        } else if (row.key === 'auto_close_time') {
+          settings.auto_close_time = row.value as string;
+        } else if (row.key === 'auto_open_time') {
+          settings.auto_open_time = row.value as string;
         }
       });
 

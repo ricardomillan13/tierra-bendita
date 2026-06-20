@@ -1,5 +1,32 @@
-import { Product } from '@/types/menu';
 import { Promotion, Product } from '@/types/menu';
+/**
+ * Returns true if `currentMinutes` falls within [from, to], handling
+ * overnight ranges (e.g. 23:00 – 12:00 next day).
+ */
+function isMinutesInRange(currentMinutes: number, from: number, to: number): boolean {
+  if (from <= to) {
+    return currentMinutes >= from && currentMinutes <= to;
+  }
+  // Overnight range: e.g. 23:00 (1380) – 12:00 (720)
+  return currentMinutes >= from || currentMinutes <= to;
+}
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/**
+ * For the automatic open/close schedule: returns true if right now
+ * the store should be considered CLOSED according to closeTime/openTime
+ * (e.g. closeTime="23:00", openTime="12:00" → closed from 11pm to noon).
+ */
+export function isWithinClosedWindow(closeTime: string, openTime: string): boolean {
+  if (!closeTime || !openTime) return false;
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  return isMinutesInRange(currentMinutes, timeToMinutes(closeTime), timeToMinutes(openTime));
+}
 
 /**
  * Returns true if the product is available right now
@@ -80,7 +107,6 @@ export function formatSchedule(product: Product): string | null {
 
 // ── Promotion → CartProduct helper ───────────────────────────────────────────
 
-
 /**
  * Converts a Promotion into a Product-shaped object so it can
  * be added to the cart without modifying useCart or CartItem.
@@ -97,6 +123,10 @@ export function promotionToCartProduct(promo: Promotion): Product {
     is_available: true,
     show_in_display: false,
     display_order: promo.display_order,
+    has_sizes: false,
+    price_large: null,
+    is_featured: false,
+    is_cross_sell: false,
     available_days: null,
     available_from: null,
     available_to: null,

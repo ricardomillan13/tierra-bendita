@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, MessageCircle, Lock, QrCode } from 'lucide-react';
+import { Settings, Save, Loader2, MessageCircle, Lock, QrCode, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -41,6 +41,9 @@ export function SettingsPanel() {
   const [autoWhatsApp, setAutoWhatsApp] = useState(true);
   const [menuUrl, setMenuUrl] = useState('');
   const [closedMessage, setClosedMessage] = useState('Estamos cerrados por el momento, vuelve pronto ☕');
+  const [autoScheduleEnabled, setAutoScheduleEnabled] = useState(false);
+  const [autoCloseTime, setAutoCloseTime] = useState('23:00');
+  const [autoOpenTime, setAutoOpenTime] = useState('12:00');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -48,6 +51,9 @@ export function SettingsPanel() {
       setAutoWhatsApp(settings.whatsapp_auto_notify?.enabled ?? true);
       setMenuUrl(settings.menu_url || '');
       setClosedMessage(settings.closed_message || 'Estamos cerrados por el momento, vuelve pronto ☕');
+      setAutoScheduleEnabled(settings.auto_schedule_enabled ?? false);
+      setAutoCloseTime(settings.auto_close_time || '23:00');
+      setAutoOpenTime(settings.auto_open_time || '12:00');
     }
   }, [settings]);
 
@@ -58,6 +64,9 @@ export function SettingsPanel() {
         updateSetting.mutateAsync({ key: 'whatsapp_auto_notify', value: { enabled: autoWhatsApp } }),
         updateSetting.mutateAsync({ key: 'menu_url', value: menuUrl }),
         updateSetting.mutateAsync({ key: 'closed_message', value: closedMessage }),
+        updateSetting.mutateAsync({ key: 'auto_schedule_enabled', value: autoScheduleEnabled }),
+        updateSetting.mutateAsync({ key: 'auto_close_time', value: autoCloseTime }),
+        updateSetting.mutateAsync({ key: 'auto_open_time', value: autoOpenTime }),
       ]);
       toast({ title: '✓ Configuración guardada' });
     } catch {
@@ -110,6 +119,39 @@ export function SettingsPanel() {
                   className="text-sm h-9"
                   placeholder="Estamos cerrados..."
                 />
+              </SettingRow>
+
+              <SettingRow
+                icon={Clock}
+                label="Cierre y apertura automática"
+                description="Por seguridad: si olvidas dar clic en 'Cerrado', el sistema cierra y reabre la tienda solo en este horario."
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-600">Activar horario automático</span>
+                  <Switch checked={autoScheduleEnabled} onCheckedChange={setAutoScheduleEnabled} />
+                </div>
+                {autoScheduleEnabled && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Hora de cierre</label>
+                      <Input
+                        type="time"
+                        value={autoCloseTime}
+                        onChange={e => setAutoCloseTime(e.target.value)}
+                        className="text-sm h-9"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Hora de apertura</label>
+                      <Input
+                        type="time"
+                        value={autoOpenTime}
+                        onChange={e => setAutoOpenTime(e.target.value)}
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  </div>
+                )}
               </SettingRow>
 
               <SettingRow

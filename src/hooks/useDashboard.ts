@@ -33,7 +33,7 @@ export function useLocalMetrics(range: DateRange) {
       if (error) throw error;
       return buildMetrics(data ?? []);
     },
-    refetchInterval: 30000,
+    staleTime: 60000, // evita refetch si reabres el dashboard antes de 1 min
   });
 }
 
@@ -57,7 +57,7 @@ export function useFieldMetrics(range: DateRange) {
       if (error) throw error;
       return buildFieldMetrics(data ?? []);
     },
-    refetchInterval: 30000,
+    staleTime: 60000,
   });
 }
 

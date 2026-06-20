@@ -11,6 +11,7 @@ import { SettingsPanel } from '@/components/pos/SettingsPanel';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings, useUpdateSetting } from '@/hooks/useSettings';
+import { useAutoStoreSchedule } from '@/hooks/useAutoStoreSchedule';
 import { Link } from 'react-router-dom';
 import { SellersPanel } from '@/components/pos/SellersPanel';
 import { UsersPanel } from '@/components/pos/UsersPanel';
@@ -23,6 +24,7 @@ export default function POS() {
   const { data: settings } = useSettings();
   const updateSetting = useUpdateSetting();
   const isOpen = settings?.is_open ?? true;
+  useAutoStoreSchedule();
 
   const toggleOpen = () => {
     updateSetting.mutate({ key: 'is_open', value: !isOpen });

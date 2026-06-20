@@ -127,7 +127,7 @@ export function useTodaysSales() {
         topProducts,
       };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 60000, // evita repetir esta consulta pesada si reabres la pantalla antes de 1 min
   });
 }
 

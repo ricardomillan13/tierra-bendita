@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, CartItem } from '@/types/menu';
+import { useSettings } from '@/hooks/useSettings';
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
 function playChime() {
@@ -56,6 +57,9 @@ export function useOrders() {
   const prevOrderIdsRef    = useRef<Set<string> | null>(null);
   const pendingChimeRef    = useRef(false); // chime queued for when tab becomes visible
 
+  const { data: settings } = useSettings();
+  const isStoreOpen = settings?.is_open ?? true;
+
   const ordersQuery = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
@@ -67,8 +71,10 @@ export function useOrders() {
       if (error) throw error;
       return data as Order[];
     },
-    refetchInterval: 10000,
-    refetchIntervalInBackground: true,  // ← keeps polling even when tab is hidden
+    // Si la tienda está cerrada, el menú no acepta pedidos nuevos (ver Menu.tsx),
+    // así que no tiene sentido seguir consultando: pausamos el polling de respaldo.
+    refetchInterval: isStoreOpen ? 30000 : false,
+    refetchIntervalInBackground: false, // deja de pegarle a Supabase si la pestaña está oculta
     refetchOnWindowFocus: true,
   });
 
@@ -105,6 +111,10 @@ export function useOrders() {
 
   // Stable subscription + visibility handler
   useEffect(() => {
+    // Si la tienda está cerrada no pueden entrar pedidos nuevos (Menu.tsx lo bloquea),
+    // así que ni siquiera abrimos el canal Realtime mientras esté cerrada.
+    if (!isStoreOpen) return;
+
     // Realtime
     const channel = supabase
       .channel(`orders-rt-${Date.now()}`)
@@ -134,7 +144,7 @@ export function useOrders() {
       supabase.removeChannel(channel);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isStoreOpen]);
 
   return ordersQuery;
 }
