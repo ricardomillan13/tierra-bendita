@@ -6,7 +6,12 @@ import { isProductAvailableNow } from '@/lib/schedule';
 import { Button } from '@/components/ui/button';
 import { QRCodeDisplay } from '@/components/pos/QRCodeDisplay';
 
-type Slide = { type: 'category'; index: number } | { type: 'promotions' };
+type Slide =
+  | { type: 'category'; catIndex: number; page: number; totalPages: number }
+  | { type: 'promotions' };
+
+// Cuántos productos mostramos por página — 4 columnas x 2 filas, nunca se corta
+const PRODUCTS_PER_PAGE = 8;
 
 export default function Display() {
   const { data: allProducts = [] } = useAllProducts();
@@ -36,13 +41,17 @@ export default function Display() {
     [categories, displayProducts]
   );
 
-  const slides: Slide[] = useMemo(
-    () => [
-      ...productsByCategory.map((_, i) => ({ type: 'category' as const, index: i })),
-      ...(promotions.length > 0 ? [{ type: 'promotions' as const }] : []),
-    ],
-    [productsByCategory.length, promotions.length]
-  );
+  const slides: Slide[] = useMemo(() => {
+    const result: Slide[] = [];
+    productsByCategory.forEach((group, catIndex) => {
+      const totalPages = Math.max(1, Math.ceil(group.products.length / PRODUCTS_PER_PAGE));
+      for (let page = 0; page < totalPages; page++) {
+        result.push({ type: 'category', catIndex, page, totalPages });
+      }
+    });
+    if (promotions.length > 0) result.push({ type: 'promotions' });
+    return result;
+  }, [productsByCategory, promotions.length]);
 
   // Auto-avance con intervalo configurable
   useEffect(() => {
@@ -77,7 +86,7 @@ export default function Display() {
   const currentSlideData = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-espresso via-coffee-dark to-espresso text-primary-foreground relative overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-espresso via-coffee-dark to-espresso text-primary-foreground relative">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-caramel blur-3xl" />
@@ -85,10 +94,10 @@ export default function Display() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 p-8 flex items-center justify-between">
+      <header className="relative z-10 p-8 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center">
-            <Coffee className="w-8 h-8" />
+          <div className="w-16 h-16 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center overflow-hidden">
+            <img src="/logo.png" alt="Tierra Bendita" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="font-display text-4xl font-bold">Tierra Bendita</h1>
@@ -119,53 +128,65 @@ export default function Display() {
       )}
 
       {/* Content */}
-      <main className="relative z-10 p-8 pt-4">
+      <main className="relative z-10 p-8 pt-4 flex-1 overflow-hidden flex flex-col">
         {slides.length === 0 ? (
           <div className="flex items-center justify-center h-[60vh]">
             <div className="text-center">
-              <Coffee className="w-24 h-24 mx-auto mb-6 opacity-50" />
+              <img src="/logo.png" alt="Tierra Bendita" className="w-24 h-24 mx-auto mb-6 rounded-full opacity-50 object-cover" />
               <p className="text-2xl opacity-70">No hay productos configurados para el display</p>
             </div>
           </div>
         ) : currentSlideData?.type === 'category' ? (
-          <div className="animate-fade-in" key={`cat-${currentSlide}`}>
+          <div className="animate-fade-in flex-1 min-h-0 flex flex-col" key={`cat-${currentSlideData.catIndex}-${currentSlideData.page}`}>
             {(() => {
-              const group = productsByCategory[currentSlideData.index];
-              return group ? (
-                <>
-                  <div className="text-center mb-12">
-                    <h2 className="font-display text-5xl font-bold mb-2">{group.category.name}</h2>
+              const group = productsByCategory[currentSlideData.catIndex];
+              if (!group) return null;
+              const { page, totalPages } = currentSlideData;
+              const pageProducts = group.products.slice(
+                page * PRODUCTS_PER_PAGE,
+                page * PRODUCTS_PER_PAGE + PRODUCTS_PER_PAGE
+              );
+              return (
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <div className="text-center mb-4 flex-shrink-0">
+                    <h2 className="font-display text-4xl font-bold mb-1">
+                      {group.category.name}
+                      {totalPages > 1 && (
+                        <span className="text-xl font-normal opacity-50 ml-3">
+                          {page + 1}/{totalPages}
+                        </span>
+                      )}
+                    </h2>
                     {group.category.description && (
-                      <p className="text-xl opacity-80">{group.category.description}</p>
+                      <p className="text-lg opacity-80">{group.category.description}</p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-                    {group.products.map((product, index) => (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full flex-1 min-h-0 auto-rows-fr">
+                    {pageProducts.map((product, index) => (
                       <div key={product.id}
-                        className="bg-primary-foreground/10 backdrop-blur-md rounded-2xl p-6 border border-primary-foreground/20 animate-slide-up"
-                        style={{ animationDelay: `${index * 100}ms` }}>
-                        <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-coffee-light/20 to-cream/20 flex items-center justify-center mb-4 overflow-hidden">
+                        className="bg-primary-foreground/10 backdrop-blur-md rounded-xl p-3 border border-primary-foreground/20 animate-slide-up flex flex-col min-h-0 overflow-hidden"
+                        style={{ animationDelay: `${index * 80}ms` }}>
+                        <div className="w-full flex-1 min-h-0 rounded-lg bg-gradient-to-br from-coffee-light/20 to-cream/20 flex items-center justify-center mb-2 overflow-hidden">
                           {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                           ) : (
-                            <img src="/logo.png" alt={product.name} className="w-2/3 h-2/3 object-contain rounded-full opacity-70" />
+                            <img src="/logo.png" alt={product.name} className="w-1/2 h-1/2 object-contain rounded-full opacity-70" />
                           )}
                         </div>
-                        <h3 className="font-display text-xl font-semibold text-center mb-2">{product.name}</h3>
-                        <p className="text-center text-3xl font-bold text-caramel">${product.price.toFixed(2)}</p>
-                        {product.description && (
-                          <p className="text-center text-sm opacity-70 mt-2 line-clamp-2">{product.description}</p>
-                        )}
+                        <h3 className="font-display text-base font-semibold text-center leading-tight line-clamp-2 flex-shrink-0">{product.name}</h3>
+                          {product.description && (
+                          <p className="text-xs text-center opacity-60 leading-tight line-clamp-2 mt-1 flex-shrink-0">{product.description}</p>
+                          )}
                       </div>
                     ))}
                   </div>
-                </>
-              ) : null;
+                </div>
+              );
             })()}
           </div>
         ) : (
-          <div className="animate-fade-in" key="promotions">
-            <div className="text-center mb-12">
+          <div className="animate-fade-in flex-1 min-h-0 flex flex-col" key="promotions">
+            <div className="text-center mb-6 flex-shrink-0">
               <div className="flex items-center justify-center gap-3 mb-2">
                 <Tag className="w-8 h-8 text-caramel" />
                 <h2 className="font-display text-5xl font-bold">Promociones</h2>
@@ -173,7 +194,7 @@ export default function Display() {
               </div>
               <p className="text-xl opacity-80">Ofertas especiales de hoy</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto flex-1 min-h-0 overflow-hidden content-start">
               {promotions.map((promo, index) => (
                 <div key={promo.id}
                   className="bg-primary-foreground/10 backdrop-blur-md rounded-2xl p-8 border border-caramel/30 animate-slide-up relative overflow-hidden"

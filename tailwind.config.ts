@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -62,16 +63,16 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         coffee: {
-          dark: "hsl(var(--coffee-dark))",
-          medium: "hsl(var(--coffee-medium))",
-          light: "hsl(var(--coffee-light))",
+          dark: "hsl(var(--coffee-dark) / <alpha-value>)",
+          medium: "hsl(var(--coffee-medium) / <alpha-value>)",
+          light: "hsl(var(--coffee-light) / <alpha-value>)",
         },
-        cream: "hsl(var(--cream))",
-        espresso: "hsl(var(--espresso))",
-        caramel: "hsl(var(--caramel))",
-        success: "hsl(var(--success))",
-        warning: "hsl(var(--warning))",
-        info: "hsl(var(--info))",
+        cream: "hsl(var(--cream) / <alpha-value>)",
+        espresso: "hsl(var(--espresso) / <alpha-value>)",
+        caramel: "hsl(var(--caramel) / <alpha-value>)",
+        success: "hsl(var(--success) / <alpha-value>)",
+        warning: "hsl(var(--warning) / <alpha-value>)",
+        info: "hsl(var(--info) / <alpha-value>)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -99,5 +100,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;
