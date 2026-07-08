@@ -106,6 +106,97 @@ function QRScanner({ onScan, onClose }: { onScan: (t: string) => void; onClose: 
   );
 }
 
+// ── Zebra / keyboard-wedge scanner ───────────────────────────────────────────
+// El Zebra TC56 actúa como teclado: "tipea" el código y manda Enter.
+// Este componente mantiene un input siempre enfocado que captura esa entrada.
+function ZebraInput({ onScan, onClose }: { onScan: (t: string) => void; onClose: () => void }) {
+  const [value, setValue]             = useState('');
+  const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const [flash, setFlash]             = useState(false);
+  const inputRef                      = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && value.trim()) {
+      e.preventDefault();
+      const code = value.trim();
+      setLastScanned(code);
+      setFlash(true);
+      onScan(code);
+      setValue('');
+      setTimeout(() => setFlash(false), 600);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,6,2,0.97)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: 24, padding: 24 }}>
+
+      <button onClick={onClose} style={{
+        position: 'absolute', top: 20, right: 20, width: 40, height: 40,
+        borderRadius: '50%', background: SURFACE, border: `1px solid ${BORDER2}`,
+        color: TEXT_DIM, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <X style={{ width: 18, height: 18 }} />
+      </button>
+
+      <p style={{ color: GOLD, fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase' }}>
+        Modo Zebra / Escáner
+      </p>
+
+      <div style={{
+        width: 80, height: 80, borderRadius: '50%',
+        background: flash ? `rgba(201,168,76,0.25)` : SURFACE,
+        border: `2px solid ${flash ? GOLD : BORDER2}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.2s',
+      }}>
+        <QrCode style={{ width: 36, height: 36, color: flash ? GOLD : TEXT_DIM }} />
+      </div>
+
+      <p style={{ color: TEXT_DIM, fontSize: 14, textAlign: 'center', maxWidth: 260 }}>
+        Apunta el escáner al código del producto y presiona el gatillo
+      </p>
+
+      <div style={{ width: '100%', maxWidth: 320 }}>
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={handleKey}
+          onBlur={() => setTimeout(() => inputRef.current?.focus(), 50)}
+          placeholder="Escanea o escribe el código..."
+          style={{
+            width: '100%', padding: '14px 16px', borderRadius: 12,
+            background: SURFACE, border: `1px solid ${flash ? GOLD : BORDER2}`,
+            color: TEXT, fontSize: 16, outline: 'none',
+            textAlign: 'center', letterSpacing: 1,
+            transition: 'border-color 0.2s',
+          }}
+        />
+        <p style={{ color: TEXT_MUTE, fontSize: 11, textAlign: 'center', marginTop: 8 }}>
+          También puedes escribir el código manualmente y presionar Enter
+        </p>
+      </div>
+
+      {lastScanned && (
+        <div style={{
+          padding: '10px 20px', borderRadius: 10,
+          background: GREEN_BG, border: `1px solid ${GREEN}`,
+          color: GREEN, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <CheckCircle style={{ width: 14, height: 14 }} />
+          {lastScanned}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Network badge ─────────────────────────────────────────────────────────────
 function NetworkBadge({ isOnline, pendingCount, syncing, onManualSync }: {
   isOnline: boolean; pendingCount: number; syncing: boolean; onManualSync: () => void;
@@ -311,6 +402,7 @@ export default function Sales() {
   const [items, setItems]                         = useState<SaleItem[]>([]);
   const [showCheckout, setShowCheckout]           = useState(false);
   const [showQR, setShowQR]                       = useState(false);
+  const [showZebra, setShowZebra]                 = useState(false);
   const [submitting, setSubmitting]               = useState(false);
   const [successWasOffline, setSuccessWasOffline] = useState<boolean | null>(null);
   const [highlightId, setHighlightId]             = useState<string | null>(null);
@@ -430,15 +522,12 @@ export default function Sales() {
                   fontFamily: "'Barlow',sans-serif", overflow: 'hidden' }}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
 
-      {/* Warm glow at top */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, pointerEvents: 'none',
                     background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 70%)' }} />
 
       {/* ── HEADER ── */}
       <header style={{ padding: '16px 16px 12px', background: DARK,
                        borderBottom: `1px solid ${BORDER}`, flexShrink: 0, position: 'relative' }}>
-
-        {/* Logo row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
             <div style={{ color: GOLD_DIM, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 }}>
@@ -454,7 +543,14 @@ export default function Sales() {
               background: GOLD_BG, border: `1px solid ${BORDER2}`, color: GOLD,
               borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}>
-              <QrCode style={{ width: 14, height: 14 }} /> QR
+              <QrCode style={{ width: 14, height: 14 }} /> Cámara
+            </button>
+            <button onClick={() => setShowZebra(true)} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: GOLD_BG2, border: `1px solid ${GOLD}`, color: GOLD,
+              borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>
+              <QrCode style={{ width: 14, height: 14 }} /> Zebra
             </button>
             <button onClick={() => setItems(prev => prev.map(i => ({ ...i, quantity: 0 })))} style={{
               display: 'flex', alignItems: 'center', gap: 6,
@@ -470,7 +566,6 @@ export default function Sales() {
           </div>
         </div>
 
-        {/* Network + sync */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <NetworkBadge isOnline={isOnline} pendingCount={pendingCount}
                         syncing={syncing} onManualSync={tryFlush} />
@@ -481,7 +576,6 @@ export default function Sales() {
           )}
         </div>
 
-        {/* QR not found */}
         {qrNotFound && (
           <div style={{ padding: '6px 12px', borderRadius: 8, marginBottom: 8,
                         background: RED_BG, border: '1px solid rgba(248,113,113,0.2)' }}>
@@ -491,7 +585,6 @@ export default function Sales() {
           </div>
         )}
 
-        {/* Total */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <div style={{ color: GOLD_DIM, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' }}>Total</div>
           <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 48, fontWeight: 900,
@@ -509,7 +602,6 @@ export default function Sales() {
         </div>
       </header>
 
-      {/* Divider glow */}
       <div style={{ height: 1, background: `linear-gradient(to right, transparent, ${GOLD}20, transparent)` }} />
 
       {/* ── PRODUCT LIST ── */}
@@ -537,7 +629,6 @@ export default function Sales() {
         )}
       </div>
 
-      {/* Divider glow */}
       <div style={{ height: 1, background: `linear-gradient(to right, transparent, ${GOLD}20, transparent)` }} />
 
       {/* ── FOOTER ── */}
@@ -564,7 +655,8 @@ export default function Sales() {
       </footer>
 
       {/* ── MODALS ── */}
-      {showQR && <QRScanner onScan={handleQRScan} onClose={() => setShowQR(false)} />}
+      {showQR    && <QRScanner  onScan={handleQRScan} onClose={() => setShowQR(false)} />}
+      {showZebra && <ZebraInput onScan={handleQRScan} onClose={() => setShowZebra(false)} />}
 
       {showCheckout && (
         <CheckoutModal items={items} total={total} isOnline={isOnline}

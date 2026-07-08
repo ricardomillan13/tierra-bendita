@@ -1,22 +1,27 @@
-// ────────────────────────────────────────────────────────────────────────────
-// Tierra Bendita Sales — Service Worker
-// Handles:
-//   1. Static asset caching (app shell)
-//   2. Offline navigation fallback
-//   3. Background Sync — flushes pending sales to Supabase when back online
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Tierra Bendita — Service Worker (PWA completa)
+// Cachea el app shell completo: menú, POS, ventas, auth, display.
+// También maneja sincronización offline de ventas en campo.
+// ─────────────────────────────────────────────────────────────────────────────
 
-const CACHE   = 'tb-sales-v2';
+const CACHE    = 'tb-app-v3';
 const SYNC_TAG = 'flush-sales';
 
 const PRECACHE = [
+  '/',
+  '/menu',
+  '/pos',
   '/sales',
+  '/display',
+  '/auth',
   '/logo.png',
   '/web-app-manifest-192x192.png',
+  '/web-app-manifest-512x512.png',
+  '/apple-icon-76x76.png',
+  '/favicon-96x96.png',
   '/site.webmanifest',
 ];
 
-// ── Install ───────────────────────────────────────────────────────────────────
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
@@ -24,7 +29,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── Activate ──────────────────────────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -34,15 +38,17 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Pass through Supabase / non-GET
-  if (url.hostname.includes('supabase.co') || request.method !== 'GET') return;
+  if (
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('twilio.com') ||
+    url.hostname.includes('r2.dev') ||
+    request.method !== 'GET'
+  ) return;
 
-  // Cache-first for static assets
   if (
     request.destination === 'image' ||
     request.destination === 'font'  ||
@@ -55,115 +61,89 @@ self.addEventListener('fetch', event => {
           const copy = res.clone();
           caches.open(CACHE).then(c => c.put(request, copy));
           return res;
-        });
+        }).catch(() => cached);
       })
     );
     return;
   }
 
-  // Network-first with offline fallback for navigation
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match('/sales').then(cached =>
-          cached ?? caches.match('/').then(r =>
-            r ?? new Response('<h2>Sin conexión</h2>', {
-              headers: { 'Content-Type': 'text/html' },
-              status: 503,
-            })
-          )
-        )
-      )
+      fetch(request)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(request, copy));
+          return res;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          return caches.match('/') || caches.match('/index.html');
+        })
     );
+    return;
   }
 });
 
-// ── Background Sync ───────────────────────────────────────────────────────────
 self.addEventListener('sync', event => {
   if (event.tag === SYNC_TAG) {
-    event.waitUntil(flushQueue());
+    event.waitUntil(flushPendingSales());
   }
 });
 
-// Also try to sync when the SW receives a message from the page
-self.addEventListener('message', event => {
-  if (event.data?.type === 'FLUSH_SALES') {
-    flushQueue().then(result => {
-      // Notify all open clients of the result
-      self.clients.matchAll().then(clients =>
-        clients.forEach(c => c.postMessage({ type: 'SYNC_RESULT', ...result }))
-      );
-    });
-  }
+self.addEventListener('online', () => {
+  self.registration.sync?.register(SYNC_TAG).catch(() => {});
 });
 
-// ── IndexedDB helpers (SW context — no imports) ───────────────────────────────
-const IDB_NAME  = 'tb_offline';
-const IDB_VER   = 1;
-const IDB_STORE = 'pending_sales';
+const DB_NAME    = 'tb-offline';
+const DB_VERSION = 1;
+const STORE      = 'pending-sales';
 
-function idbOpen() {
+function openDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, IDB_VER);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(IDB_STORE)) {
-        req.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror   = () => reject(req.error);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: 'id' });
+    req.onsuccess       = e => resolve(e.target.result);
+    req.onerror         = e => reject(e.target.error);
   });
 }
 
 function idbGetAll(db) {
   return new Promise((resolve, reject) => {
-    const tx  = db.transaction(IDB_STORE, 'readonly');
-    const req = tx.objectStore(IDB_STORE).getAll();
-    req.onsuccess = () => resolve(req.result.filter(s => !s.synced));
-    req.onerror   = () => reject(req.error);
+    const tx  = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
   });
 }
 
 function idbDelete(db, id) {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror    = () => reject(tx.error);
+    const tx  = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror   = e => reject(e.target.error);
   });
 }
 
-// ── Flush queue → Supabase REST API ──────────────────────────────────────────
-async function flushQueue() {
-  // Read Supabase credentials stored by the page in the SW scope
-  // (sent via postMessage on SW registration)
+async function flushPendingSales() {
   const cfg = await getConfig();
-  if (!cfg) {
-    console.warn('[SW] No Supabase config available yet');
-    return { synced: 0, failed: 0 };
-  }
+  if (!cfg) return;
 
-  const db      = await idbOpen();
-  const pending = await idbGetAll(db);
+  const db    = await openDB();
+  const sales = await idbGetAll(db);
+  let synced  = 0;
+  let failed  = 0;
 
-  if (pending.length === 0) {
-    db.close();
-    return { synced: 0, failed: 0 };
-  }
-
-  let synced = 0;
-  let failed = 0;
-
-  for (const sale of pending) {
+  for (const sale of sales) {
     try {
-      // 1. Insert order
       const orderRes = await fetch(`${cfg.url}/rest/v1/orders`, {
         method:  'POST',
         headers: {
           'Content-Type':  'application/json',
           'apikey':         cfg.key,
           'Authorization': `Bearer ${cfg.key}`,
-          'Prefer':        'return=representation',
+          'Prefer':         'return=representation',
         },
         body: JSON.stringify({
           customer_whatsapp: 'ventas-mostrador',
@@ -179,7 +159,6 @@ async function flushQueue() {
       if (!orderRes.ok) throw new Error(`Order insert failed: ${orderRes.status}`);
       const [order] = await orderRes.json();
 
-      // 2. Insert order items
       const itemsRes = await fetch(`${cfg.url}/rest/v1/order_items`, {
         method:  'POST',
         headers: {
@@ -203,7 +182,6 @@ async function flushQueue() {
 
       await idbDelete(db, sale.id);
       synced++;
-      console.log(`[SW] Synced sale ${sale.id}`);
     } catch (err) {
       console.warn(`[SW] Could not sync sale ${sale.id}:`, err);
       failed++;
@@ -214,7 +192,6 @@ async function flushQueue() {
   return { synced, failed };
 }
 
-// ── Config storage (Supabase URL + key sent from page) ────────────────────────
 let _config = null;
 
 self.addEventListener('message', event => {
@@ -224,5 +201,5 @@ self.addEventListener('message', event => {
 });
 
 async function getConfig() {
-  return _config; // set by the page via postMessage
+  return _config;
 }

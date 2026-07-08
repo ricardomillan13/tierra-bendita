@@ -1,13 +1,13 @@
 {
-  "name": "Tierra Bendita · Ventas",
-  "short_name": "TB Ventas",
-  "description": "App de ventas en campo para vendedores de Tierra Bendita",
-  "start_url": "/sales",
+  "name": "Tierra Bendita Chocolate & Coffee Shop",
+  "short_name": "Tierra Bendita",
+  "description": "Menú digital, punto de venta y app de vendedores de Tierra Bendita",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0D0D0D",
-  "theme_color": "#0D0D0D",
+  "orientation": "any",
+  "background_color": "#0f0602",
+  "theme_color": "#0f0602",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -22,12 +22,35 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
+      "src": "/apple-icon-76x76.png",
+      "sizes": "76x76",
       "type": "image/png",
       "purpose": "any"
     }
   ],
-  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Menú",
+      "short_name": "Menú",
+      "description": "Ver el menú digital",
+      "url": "/menu",
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "POS",
+      "short_name": "POS",
+      "description": "Panel de administración",
+      "url": "/pos",
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ventas",
+      "short_name": "Ventas",
+      "description": "App de vendedores",
+      "url": "/sales",
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["food", "business", "productivity"],
   "lang": "es"
 }

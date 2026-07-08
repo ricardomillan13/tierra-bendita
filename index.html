@@ -10,31 +10,31 @@
 
     <!-- PWA -->
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#0D0D0D" />
+    <meta name="theme-color" content="#0f0602" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="TB Ventas" />
+    <meta name="apple-mobile-web-app-title" content="Tierra Bendita" />
 
     <title>Tierra Bendita Chocolate &amp; Coffee Shop</title>
-    <meta name="description" content="Sistema de menú digital con punto de venta Tierra Bendita Chocolate & Coffee Shop" />
-    <meta name="author" content="Tierra Bendita Chocolate & Coffee Shop" />
+    <meta name="description" content="Menú digital, punto de venta y app de vendedores — Tierra Bendita Chocolate & Coffee Shop" />
 
     <meta property="og:title" content="Tierra Bendita Chocolate & Coffee Shop" />
-    <meta property="og:description" content="Sistema de menú digital con punto de venta" />
+    <meta property="og:description" content="Menú digital y punto de venta" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.tierrabenditacafe.com" />
+    <meta property="og:image" content="/logo.png" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register service worker for PWA
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
-            .catch(err => console.warn('SW registration failed:', err));
+            .then(reg => console.log('[PWA] SW registrado:', reg.scope))
+            .catch(err => console.warn('[PWA] SW registration failed:', err));
         });
       }
     </script>
