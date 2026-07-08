@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
-import { QrCode, Smartphone, ClipboardList, MessageCircle, Settings } from 'lucide-react';
+import { QrCode, Smartphone, ClipboardList, MessageCircle, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Index() {
+  const { user, isAdmin, isSeller, signOut } = useAuth();
   return (
     <div className="min-h-screen bg-[#0e0806] text-white font-['Inter',sans-serif]">
 
@@ -27,15 +29,36 @@ export default function Index() {
           }}
         />
 
-        {/* Admin link — top right */}
-        <div className="relative z-10 flex justify-end p-5">
-          <Link
-            to="/auth"
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-amber-400 transition-colors duration-300"
-          >
-            <Settings className="w-3 h-3" />
-            Admin
-          </Link>
+        {/* Top right — sesión */}
+        <div className="relative z-10 flex justify-end items-center gap-3 p-5">
+          {user ? (
+            <>
+              {(isAdmin || isSeller) && (
+                <Link
+                  to={isAdmin ? '/pos' : '/sales'}
+                  className="flex items-center gap-1.5 text-xs text-white/40 hover:text-amber-400 transition-colors duration-300"
+                >
+                  <Settings className="w-3 h-3" />
+                  {isAdmin ? 'Panel' : 'Ventas'}
+                </Link>
+              )}
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-red-400 transition-colors duration-300"
+              >
+                <LogOut className="w-3 h-3" />
+                Cerrar sesión
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              className="flex items-center gap-1.5 text-xs text-white/40 hover:text-amber-400 transition-colors duration-300"
+            >
+              <Settings className="w-3 h-3" />
+              Admin
+            </Link>
+          )}
         </div>
 
         {/* Hero content */}
@@ -136,14 +159,14 @@ export default function Index() {
           </div>
         </div>
       </section>
+
       {/* ── FOOTER ── */}
       <footer className="py-10 px-6 text-center" style={{ borderTop: '1px solid rgba(180,83,9,0.15)', background: '#0a0503' }}>
-        {/* Social links */}
         <div className="flex flex-col items-center justify-center gap-2 mb-6">
-  <span className="text-sm font-semibold text-gray-700">
-    Síguenos en Instagram
-  </span>
-          <a
+          <span className="text-sm font-semibold text-gray-700">
+            Síguenos en Instagram
+          </span>
+          
             href="https://www.instagram.com/tierrabendita.coffee?igsh=MTJhMXZnOXhsendtaw=="
             target="_blank"
             rel="noopener noreferrer"
