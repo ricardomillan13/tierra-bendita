@@ -8,10 +8,9 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-[#0e0806] text-white font-['Inter',sans-serif]">
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <section className="relative min-h-screen flex flex-col">
 
-        {/* Background image */}
         <img
           src="/local-1.jpg"
           alt=""
@@ -20,7 +19,6 @@ export default function Index() {
           style={{ objectFit: 'cover', objectPosition: 'center center' }}
         />
 
-        {/* Warm dark gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
@@ -29,7 +27,7 @@ export default function Index() {
           }}
         />
 
-        {/* Top right — sesión */}
+        {/* Top right session buttons */}
         <div className="relative z-10 flex justify-end items-center gap-2 p-5">
           {!loading && (
             user ? (
@@ -63,12 +61,11 @@ export default function Index() {
           )}
         </div>
 
-        {/* Hero content */}
         <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-6 text-center pb-20">
           <div className="flex items-center gap-3 mb-8">
             <div className="h-px w-12 bg-amber-600/60" />
             <span className="text-amber-500/80 text-xs tracking-[0.3em] uppercase font-light">
-              Chocolate & Coffee Shop
+              Chocolate &amp; Coffee Shop
             </span>
             <div className="h-px w-12 bg-amber-600/60" />
           </div>
@@ -84,7 +81,7 @@ export default function Index() {
             className="text-3xl sm:text-4xl md:text-5xl font-light text-amber-400/90 mb-6"
             style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
           >
-            Chocolate & Coffee Shop
+            Chocolate &amp; Coffee Shop
           </p>
 
           <p className="text-white/60 text-base md:text-lg max-w-md mb-12 leading-relaxed font-light">
@@ -106,14 +103,13 @@ export default function Index() {
           </Link>
         </div>
 
-        {/* Scroll hint */}
         <div className="relative z-10 flex flex-col items-center pb-8 gap-1 opacity-40">
           <div className="w-px h-8 bg-white/50 animate-pulse" />
           <span className="text-[10px] tracking-widest uppercase text-white/50">scroll</span>
         </div>
       </section>
 
-      {/* ── CÓMO FUNCIONA ── */}
+      {/* COMO FUNCIONA */}
       <section className="py-24 px-6" style={{ background: 'linear-gradient(180deg, #0e0806 0%, #150d08 100%)' }}>
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
@@ -137,7 +133,6 @@ export default function Index() {
             <StepCard number={4} icon={<MessageCircle className="w-5 h-5" />} title="Te avisamos" description="Recibes una notificación por WhatsApp cuando esté listo" />
           </div>
 
-          {/* Photo gallery */}
           <div className="mt-20 grid grid-cols-2 gap-4 max-w-3xl mx-auto">
             <div className="relative overflow-hidden rounded-xl" style={{ height: '240px' }}>
               <img
@@ -161,26 +156,26 @@ export default function Index() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <footer className="py-10 px-6 text-center" style={{ borderTop: '1px solid rgba(180,83,9,0.15)', background: '#0a0503' }}>
         <div className="flex flex-col items-center justify-center gap-2 mb-6">
           <span className="text-sm font-semibold text-gray-700">
             Síguenos en Instagram
           </span>
           
-            href="https://www.instagram.com/tierrabendita.coffee?igsh=MTJhMXZnOXhsendtaw=="
+            <a href="https://www.instagram.com/tierrabendita.coffee?igsh=MTJhMXZnOXhsendtaw=="
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105"
             style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)', color: '#fff' }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
             </svg>
             @tierrabendita.coffee
           </a>
         </div>
-        <p className="text-white/25 text-sm">© 2025 Tierra Bendita Chocolate & Coffee Shop</p>
+        <p className="text-white/25 text-sm">© 2025 Tierra Bendita Chocolate &amp; Coffee Shop</p>
       </footer>
     </div>
   );
