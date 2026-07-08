@@ -8,24 +8,31 @@ import { useSettings } from '@/hooks/useSettings';
 function playChime() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const notes = [
-      { freq: 880,  start: 0,   duration: 0.25 },
-      { freq: 1047, start: 0.2, duration: 0.4  },
-    ];
-    notes.forEach(({ freq, start, duration }) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-      gain.gain.setValueAtTime(0, ctx.currentTime + start);
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + start + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-      osc.start(ctx.currentTime + start);
-      osc.stop(ctx.currentTime + start + duration);
-    });
-    setTimeout(() => ctx.close(), 1000);
+    const REPS = 3;          // se repite 3 veces para que sea imposible ignorarlo
+    const TONE_DUR = 0.18;
+    const NOTE_GAP = 0.03;
+    const REP_GAP = 0.12;
+    const pattern = [988, 740]; // ding-dong (tono alto, tono bajo)
+
+    let t = 0;
+    for (let r = 0; r < REPS; r++) {
+      pattern.forEach(freq => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'square'; // onda cuadrada = sonido más cortante y notorio que sine
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
+        gain.gain.setValueAtTime(0, ctx.currentTime + t);
+        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + t + 0.01); // volumen alto
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + TONE_DUR);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + TONE_DUR);
+        t += TONE_DUR + NOTE_GAP;
+      });
+      t += REP_GAP;
+    }
+    setTimeout(() => ctx.close(), (t + 0.5) * 1000);
   } catch { /* silently fail */ }
 }
 
