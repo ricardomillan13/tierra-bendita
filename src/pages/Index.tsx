@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Index() {
-  const { user, isAdmin, isSeller, signOut } = useAuth();
+  const { user, isAdmin, isSeller, loading, signOut } = useAuth();
   return (
     <div className="min-h-screen bg-[#0e0806] text-white font-['Inter',sans-serif]">
 
@@ -30,34 +30,36 @@ export default function Index() {
         />
 
         {/* Top right — sesión */}
-        <div className="relative z-10 flex justify-end items-center gap-3 p-5">
-          {user ? (
-            <>
-              {(isAdmin || isSeller) && (
-                <Link
-                  to={isAdmin ? '/pos' : '/sales'}
-                  className="flex items-center gap-1.5 text-xs text-white/40 hover:text-amber-400 transition-colors duration-300"
+        <div className="relative z-10 flex justify-end items-center gap-2 p-5">
+          {!loading && (
+            user ? (
+              <>
+                {(isAdmin || isSeller) && (
+                  <Link
+                    to={isAdmin ? '/pos' : '/sales'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-amber-400 border border-amber-400/30 bg-black/30 hover:bg-amber-400/10 transition-all duration-300"
+                  >
+                    <Settings className="w-3 h-3" />
+                    {isAdmin ? 'Panel' : 'Ventas'}
+                  </Link>
+                )}
+                <button
+                  onClick={signOut}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-white/20 bg-black/30 hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-400 transition-all duration-300"
                 >
-                  <Settings className="w-3 h-3" />
-                  {isAdmin ? 'Panel' : 'Ventas'}
-                </Link>
-              )}
-              <button
-                onClick={signOut}
-                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-red-400 transition-colors duration-300"
+                  <LogOut className="w-3 h-3" />
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/auth"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white/50 border border-white/10 bg-black/20 hover:text-amber-400 hover:border-amber-400/30 transition-all duration-300"
               >
-                <LogOut className="w-3 h-3" />
-                Cerrar sesión
-              </button>
-            </>
-          ) : (
-            <Link
-              to="/auth"
-              className="flex items-center gap-1.5 text-xs text-white/40 hover:text-amber-400 transition-colors duration-300"
-            >
-              <Settings className="w-3 h-3" />
-              Admin
-            </Link>
+                <Settings className="w-3 h-3" />
+                Admin
+              </Link>
+            )
           )}
         </div>
 
@@ -114,7 +116,6 @@ export default function Index() {
       {/* ── CÓMO FUNCIONA ── */}
       <section className="py-24 px-6" style={{ background: 'linear-gradient(180deg, #0e0806 0%, #150d08 100%)' }}>
         <div className="max-w-4xl mx-auto">
-
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="h-px w-10 bg-amber-700/50" />
