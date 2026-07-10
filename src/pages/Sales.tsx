@@ -9,7 +9,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMySellerProfile, useMyInventory } from '@/hooks/useSellers';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 
-// ── Tierra Bendita tokens ─────────────────────────────────────────────────────
 const ESPRESSO  = '#0f0602';
 const DARK      = '#1a0a02';
 const SURFACE   = '#231008';
@@ -107,17 +106,13 @@ function QRScanner({ onScan, onClose }: { onScan: (t: string) => void; onClose: 
 }
 
 // ── Zebra / keyboard-wedge scanner ───────────────────────────────────────────
-// El Zebra TC56 actúa como teclado: "tipea" el código y manda Enter.
-// Este componente mantiene un input siempre enfocado que captura esa entrada.
 function ZebraInput({ onScan, onClose }: { onScan: (t: string) => void; onClose: () => void }) {
   const [value, setValue]             = useState('');
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [flash, setFlash]             = useState(false);
   const inputRef                      = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && value.trim()) {
@@ -135,7 +130,6 @@ function ZebraInput({ onScan, onClose }: { onScan: (t: string) => void; onClose:
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,6,2,0.97)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   justifyContent: 'center', gap: 24, padding: 24 }}>
-
       <button onClick={onClose} style={{
         position: 'absolute', top: 20, right: 20, width: 40, height: 40,
         borderRadius: '50%', background: SURFACE, border: `1px solid ${BORDER2}`,
@@ -459,6 +453,44 @@ export default function Sales() {
     }
   }, [items]);
 
+  // ── Zebra always-on ───────────────────────────────────────────────────────
+  const zebraBufferRef = useRef('');
+  const zebraTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zebraInputRef  = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showQR || showZebra || showCheckout) return;
+    const refocus = () => {
+      if (!document.activeElement || document.activeElement === document.body) {
+        zebraInputRef.current?.focus();
+      }
+    };
+    refocus();
+    document.addEventListener('click', refocus);
+    return () => document.removeEventListener('click', refocus);
+  }, [showQR, showZebra, showCheckout]);
+
+  const handleZebraInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    zebraBufferRef.current = e.target.value;
+    if (zebraTimerRef.current) clearTimeout(zebraTimerRef.current);
+    zebraTimerRef.current = setTimeout(() => {
+      const code = zebraBufferRef.current.trim();
+      if (code.length >= 3) handleQRScan(code);
+      zebraBufferRef.current = '';
+      if (zebraInputRef.current) zebraInputRef.current.value = '';
+    }, 80);
+  }, [handleQRScan]);
+
+  const handleZebraKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      if (zebraTimerRef.current) clearTimeout(zebraTimerRef.current);
+      const code = zebraBufferRef.current.trim();
+      if (code.length >= 3) handleQRScan(code);
+      zebraBufferRef.current = '';
+      if (zebraInputRef.current) zebraInputRef.current.value = '';
+    }
+  }, [handleQRScan]);
+
   const activeItems = items.filter(i => i.quantity > 0);
   const total       = activeItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
@@ -637,9 +669,7 @@ export default function Sales() {
           width: '100%', border: 'none', borderRadius: 16, padding: '18px 20px',
           cursor: total > 0 ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: total > 0
-            ? (!isOnline ? 'rgba(251,191,36,0.9)' : GOLD)
-            : SURFACE,
+          background: total > 0 ? (!isOnline ? 'rgba(251,191,36,0.9)' : GOLD) : SURFACE,
           transition: 'all 0.2s',
           boxShadow: total > 0 ? `0 4px 20px rgba(201,168,76,0.25)` : 'none',
         }}>
@@ -654,9 +684,22 @@ export default function Sales() {
         </button>
       </footer>
 
+      {/* Input invisible always-on para Zebra TC56 */}
+      {!showQR && !showZebra && !showCheckout && (
+        <input
+          ref={zebraInputRef}
+          onChange={handleZebraInput}
+          onKeyDown={handleZebraKeyDown}
+          style={{ position: 'fixed', opacity: 0, pointerEvents: 'none', width: 1, height: 1, top: -99 }}
+          tabIndex={-1}
+          aria-hidden="true"
+          autoComplete="off"
+        />
+      )}
+
       {/* ── MODALS ── */}
-      {showQR    && <QRScanner  onScan={handleQRScan} onClose={() => setShowQR(false)} />}
-      {showZebra && <ZebraInput onScan={handleQRScan} onClose={() => setShowZebra(false)} />}
+      {showQR    && <QRScanner   onScan={handleQRScan} onClose={() => setShowQR(false)} />}
+      {showZebra && <ZebraInput  onScan={handleQRScan} onClose={() => setShowZebra(false)} />}
 
       {showCheckout && (
         <CheckoutModal items={items} total={total} isOnline={isOnline}
