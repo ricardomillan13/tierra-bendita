@@ -453,39 +453,57 @@ export default function Sales() {
     }
   }, [items]);
 
-  // ── Zebra always-on ───────────────────────────────────────────────────────
+// ── Zebra always-on: captura global de teclado ───────────────────────────────
   const zebraBufferRef = useRef('');
   const zebraTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zebraInputRef  = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (showQR || showZebra || showCheckout) return;
-    const refocus = () => {
-      if (!document.activeElement || document.activeElement === document.body) {
-        zebraInputRef.current?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'Enter') {
+        if (zebraTimerRef.current) clearTimeout(zebraTimerRef.current);
+        const code = zebraBufferRef.current.trim();
+        if (code.length >= 2) handleQRScan(code);
+        zebraBufferRef.current = '';
+        return;
+      }
+
+      if (e.key.length === 1) {
+        zebraBufferRef.current += e.key;
+        if (zebraTimerRef.current) clearTimeout(zebraTimerRef.current);
+        zebraTimerRef.current = setTimeout(() => {
+          const code = zebraBufferRef.current.trim();
+          if (code.length >= 2) handleQRScan(code);
+          zebraBufferRef.current = '';
+        }, 100);
       }
     };
-    refocus();
-    document.addEventListener('click', refocus);
-    return () => document.removeEventListener('click', refocus);
-  }, [showQR, showZebra, showCheckout]);
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showQR, showZebra, showCheckout, handleQRScan]);
 
   const handleZebraInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     zebraBufferRef.current = e.target.value;
     if (zebraTimerRef.current) clearTimeout(zebraTimerRef.current);
     zebraTimerRef.current = setTimeout(() => {
       const code = zebraBufferRef.current.trim();
-      if (code.length >= 3) handleQRScan(code);
+      if (code.length >= 2) handleQRScan(code);
       zebraBufferRef.current = '';
       if (zebraInputRef.current) zebraInputRef.current.value = '';
-    }, 80);
+    }, 100);
   }, [handleQRScan]);
 
   const handleZebraKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       if (zebraTimerRef.current) clearTimeout(zebraTimerRef.current);
       const code = zebraBufferRef.current.trim();
-      if (code.length >= 3) handleQRScan(code);
+      if (code.length >= 2) handleQRScan(code);
       zebraBufferRef.current = '';
       if (zebraInputRef.current) zebraInputRef.current.value = '';
     }
