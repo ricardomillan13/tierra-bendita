@@ -5,12 +5,38 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Storage robusto: intenta localStorage, si falla (Firefox privado, Zebra, etc.)
+// cae a sessionStorage, y si también falla usa memoria en RAM.
+const robustStorage = (() => {
+  const mem: Record<string, string> = {};
+
+  const tryLocal = () => {
+    try { localStorage.setItem('__test__', '1'); localStorage.removeItem('__test__'); return true; }
+    catch { return false; }
+  };
+  const trySession = () => {
+    try { sessionStorage.setItem('__test__', '1'); sessionStorage.removeItem('__test__'); return true; }
+    catch { return false; }
+  };
+
+  const store: Storage = tryLocal() ? localStorage : trySession() ? sessionStorage : {
+    length: 0,
+    clear: () => { Object.keys(mem).forEach(k => delete mem[k]); },
+    getItem: (k: string) => mem[k] ?? null,
+    setItem: (k: string, v: string) => { mem[k] = v; },
+    removeItem: (k: string) => { delete mem[k]; },
+    key: (i: number) => Object.keys(mem)[i] ?? null,
+  } as Storage;
+
+  return store;
+})();
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: robustStorage,
     persistSession: true,
     autoRefreshToken: true,
   }
