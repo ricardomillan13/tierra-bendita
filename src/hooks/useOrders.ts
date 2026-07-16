@@ -227,9 +227,13 @@ export function useCreateOrder() {
 export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: Order['status'] }) => {
+    mutationFn: async ({ id, status, cancelReason }: { id: string; status: Order['status']; cancelReason?: string }) => {
+      const updatePayload: { status: Order['status']; cancel_reason?: string } = { status };
+      if (status === 'cancelled') {
+        updatePayload.cancel_reason = cancelReason || null as unknown as string;
+      }
       const { data, error } = await supabase
-        .from('orders').update({ status }).eq('id', id).select().single();
+        .from('orders').update(updatePayload).eq('id', id).select().single();
       if (error) throw error;
       return data as Order;
     },
