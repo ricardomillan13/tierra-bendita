@@ -45,6 +45,7 @@ export interface Order {
   total: number;
   notes: string | null;
   whatsapp_notified: boolean;
+  cancel_reason: string | null;
   created_at: string;
   updated_at: string;
 }
