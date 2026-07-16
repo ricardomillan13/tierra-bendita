@@ -2,17 +2,27 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const MENU_URL = Deno.env.get('MENU_URL') || 'https://tierrabendita.com/menu';
 
-// Twilio sends webhooks as application/x-www-form-urlencoded
+// Solo palabras exactas de opt-in — evita falsos positivos
+const OPT_IN_KEYWORDS = ['sí', 'si', 'yes', 'start', 'ok', 'okay'];
+
 serve(async (req) => {
   try {
     const body = await req.text();
     const params = new URLSearchParams(body);
     const from = params.get('From') || '';
-    const message = params.get('Body') || '';
+    const message = (params.get('Body') || '').trim().toLowerCase();
 
     console.log(`Mensaje de ${from}: ${message}`);
 
-    // Auto-reply in TwiML format — Twilio reads this and sends it as WhatsApp message
+    // Si el mensaje completo ES una palabra de opt-in, no responder nada
+    const isOptIn = OPT_IN_KEYWORDS.includes(message);
+    if (isOptIn) {
+      return new Response(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { headers: { 'Content-Type': 'text/xml' } }
+      );
+    }
+
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Message>
@@ -32,7 +42,6 @@ Si tienes alguna pregunta, con gusto te ayudamos. ¡Te esperamos! ☕
 
   } catch (err) {
     console.error('Error:', err);
-    // Return empty TwiML on error so Twilio doesn't retry indefinitely
     return new Response(
       '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
       { headers: { 'Content-Type': 'text/xml' } }
