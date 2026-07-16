@@ -1,6 +1,6 @@
 # Tierra Bendita Chocolate & Coffee Shop — Sistema POS
 
-Sistema de menú digital con punto de venta y notificaciones automaticas por WhatsApp por estatus.
+Sistema de menú digital con punto de venta y notificaciones automaticas por WhatsApp.
 
 ## Tecnologías
 
