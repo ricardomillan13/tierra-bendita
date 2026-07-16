@@ -101,16 +101,27 @@ export function useOrders() {
       o => !prevOrderIdsRef.current!.has(o.id) && o.status === 'pending'
     );
 
-    if (newOrders.length > 0) {
+   if (newOrders.length > 0) {
       if (document.hidden) {
-        // Tab is hidden: browser notification (OS plays its own sound)
         newOrders.forEach(o => sendBrowserNotification(o.order_number));
-        // Queue chime for when the user returns to the tab
         pendingChimeRef.current = true;
       } else {
-        // Tab is visible: play chime immediately
         playChime();
       }
+
+      // Mandar WhatsApp "pedido recibido" a cada pedido nuevo
+      newOrders.forEach(o => {
+        if (o.customer_whatsapp) {
+          supabase.functions.invoke('send-whatsapp', {
+            body: {
+              to: o.customer_whatsapp,
+              orderNumber: o.order_number,
+              customerName: o.customer_name || undefined,
+              status: 'received',
+            },
+          }).catch(err => console.warn('[WA] Error enviando recibido:', err));
+        }
+      });
     }
 
     prevOrderIdsRef.current = currentIds;
