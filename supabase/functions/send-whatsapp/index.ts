@@ -28,7 +28,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, orderNumber, customerName, status = 'ready' } = await req.json();
+    const { to, orderNumber, customerName, status = 'ready', cancelReason } = await req.json();
 
     if (!to || !orderNumber) {
       return new Response(
@@ -46,7 +46,12 @@ serve(async (req) => {
     else                                                    phone = `+${clean}`;
 
     const toWhatsApp = `whatsapp:${phone}`;
-    const contentSid = TEMPLATE_SIDS[status] || TEMPLATE_SIDS['ready'];
+
+    // 'cancelled' no tiene plantilla aprobada por Meta todavía → siempre texto libre,
+    // nunca debe caer al fallback de la plantilla 'ready'.
+    const contentSid = status === 'cancelled'
+      ? undefined
+      : (TEMPLATE_SIDS[status] || TEMPLATE_SIDS['ready']);
     const varsBuilder = TEMPLATE_VARS[status] || TEMPLATE_VARS['ready'];
 
     const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
@@ -59,6 +64,10 @@ serve(async (req) => {
       params.set('ContentVariables', JSON.stringify(
         varsBuilder(customerName || 'cliente', String(orderNumber))
       ));
+    } else if (status === 'cancelled') {
+      const greeting = customerName ? `Hola ${customerName} 👋` : 'Hola 👋';
+      const reasonLine = cancelReason ? `\n\nMotivo: ${cancelReason}` : '';
+      params.set('Body', `${greeting}\n\n😔 Lamentamos informarte que tu pedido *#${orderNumber}* en *Tierra Bendita* fue cancelado.${reasonLine}\n\nSi tienes dudas, respóndenos por este medio.`);
     } else {
       const greeting = customerName ? `Hola ${customerName} 👋` : 'Hola 👋';
       params.set('Body', `${greeting}\n\n☕ Tu pedido *#${orderNumber}* en *Tierra Bendita*.\n\n¡Gracias por tu preferencia!`);
