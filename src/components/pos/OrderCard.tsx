@@ -66,22 +66,32 @@ export function OrderCard({ order }: OrderCardProps) {
   const status = statusConfig[order.status];
   const StatusIcon = status.icon;
 
-  const sendWhatsApp = async () => {
+  const sendWhatsApp = async (statusType: 'received' | 'preparing' | 'ready' = 'ready') => {
     try {
       const { data, error } = await supabase.functions.invoke('send-whatsapp', {
         body: {
           to: order.customer_whatsapp,
           orderNumber: order.order_number,
           customerName: order.customer_name || undefined,
+          status: statusType,
         },
       });
 
       if (error) throw error;
 
-      markNotified.mutate(order.id);
+      if (statusType === 'ready') {
+        markNotified.mutate(order.id);
+      }
+
+      const labels: Record<string, string> = {
+        received:  'Pedido recibido',
+        preparing: 'En preparación',
+        ready:     'Listo para recoger',
+      };
+
       toast({
         title: '✓ WhatsApp enviado',
-        description: `Notificación enviada al pedido #${order.order_number}`,
+        description: `"${labels[statusType]}" → #${order.order_number}`,
       });
     } catch (err) {
       console.error('Error enviando WhatsApp:', err);
@@ -94,12 +104,18 @@ export function OrderCard({ order }: OrderCardProps) {
   };
 
   const handleStatusChange = (newStatus: Order['status']) => {
-    if (newStatus === 'ready' && settings?.whatsapp_auto_notify?.enabled && !order.whatsapp_notified) {
-      // Show confirmation dialog
+    const autoNotify = settings?.whatsapp_auto_notify?.enabled;
+
+    if (newStatus === 'ready' && autoNotify && !order.whatsapp_notified) {
       setPendingStatusChange('ready');
       setShowWhatsAppConfirm(true);
     } else {
       updateStatus.mutate({ id: order.id, status: newStatus });
+      if (autoNotify) {
+        setTimeout(() => {
+          if (newStatus === 'preparing') sendWhatsApp('preparing');
+        }, 300);
+      }
     }
   };
 
@@ -107,9 +123,8 @@ export function OrderCard({ order }: OrderCardProps) {
     updateStatus.mutate({ id: order.id, status: 'ready' });
     
     if (sendNotification) {
-      // Small delay to ensure status is updated first
       setTimeout(() => {
-        sendWhatsApp();
+        sendWhatsApp('ready');
       }, 300);
     }
     
@@ -118,12 +133,13 @@ export function OrderCard({ order }: OrderCardProps) {
   };
 
   const handleManualWhatsApp = () => {
-    sendWhatsApp();
+    sendWhatsApp('ready');
   };
 
   const handlePrint = () => {
     const printContent = `
-      CAFÉ AROMA
+      TIERRA BENDITA
+      Chocolate & Coffee Shop
       ================
       Pedido #${order.order_number}
       ${new Date(order.created_at).toLocaleString('es')}
