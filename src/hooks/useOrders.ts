@@ -8,11 +8,11 @@ import { useSettings } from '@/hooks/useSettings';
 function playChime() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const REPS = 3;          // se repite 3 veces para que sea imposible ignorarlo
+    const REPS = 3;
     const TONE_DUR = 0.18;
     const NOTE_GAP = 0.03;
     const REP_GAP = 0.12;
-    const pattern = [988, 740]; // ding-dong (tono alto, tono bajo)
+    const pattern = [988, 740];
 
     let t = 0;
     for (let r = 0; r < REPS; r++) {
@@ -21,10 +21,10 @@ function playChime() {
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.type = 'square'; // onda cuadrada = sonido más cortante y notorio que sine
+        osc.type = 'square';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
         gain.gain.setValueAtTime(0, ctx.currentTime + t);
-        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + t + 0.01); // volumen alto
+        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + t + 0.01);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + TONE_DUR);
         osc.start(ctx.currentTime + t);
         osc.stop(ctx.currentTime + t + TONE_DUR);
@@ -62,7 +62,7 @@ export function useOrders() {
   queryClientRef.current   = queryClient;
 
   const prevOrderIdsRef    = useRef<Set<string> | null>(null);
-  const pendingChimeRef    = useRef(false); // chime queued for when tab becomes visible
+  const pendingChimeRef    = useRef(false);
 
   const { data: settings } = useSettings();
   const isStoreOpen = settings?.is_open ?? true;
@@ -78,14 +78,14 @@ export function useOrders() {
       if (error) throw error;
       return data as Order[];
     },
-    // Si la tienda está cerrada, el menú no acepta pedidos nuevos (ver Menu.tsx),
-    // así que no tiene sentido seguir consultando: pausamos el polling de respaldo.
     refetchInterval: isStoreOpen ? 30000 : false,
-    refetchIntervalInBackground: false, // deja de pegarle a Supabase si la pestaña está oculta
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 
   // Detect new orders → chime + browser notification
+  const notifiedOrdersRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const orders = ordersQuery.data;
     if (!orders) return;
@@ -93,7 +93,9 @@ export function useOrders() {
     const currentIds = new Set(orders.map(o => o.id));
 
     if (prevOrderIdsRef.current === null) {
+      // Primera carga: marcar todos los existentes como ya notificados
       prevOrderIdsRef.current = currentIds;
+      orders.forEach(o => notifiedOrdersRef.current.add(o.id));
       return;
     }
 
@@ -101,7 +103,7 @@ export function useOrders() {
       o => !prevOrderIdsRef.current!.has(o.id) && o.status === 'pending'
     );
 
-   if (newOrders.length > 0) {
+    if (newOrders.length > 0) {
       if (document.hidden) {
         newOrders.forEach(o => sendBrowserNotification(o.order_number));
         pendingChimeRef.current = true;
@@ -109,9 +111,10 @@ export function useOrders() {
         playChime();
       }
 
-      // Mandar WhatsApp "pedido recibido" a cada pedido nuevo
+      // Mandar WhatsApp "pedido recibido" solo si no lo hemos notificado antes
       newOrders.forEach(o => {
-        if (o.customer_whatsapp) {
+        if (o.customer_whatsapp && !notifiedOrdersRef.current.has(o.id)) {
+          notifiedOrdersRef.current.add(o.id);
           supabase.functions.invoke('send-whatsapp', {
             body: {
               to: o.customer_whatsapp,
@@ -129,11 +132,8 @@ export function useOrders() {
 
   // Stable subscription + visibility handler
   useEffect(() => {
-    // Si la tienda está cerrada no pueden entrar pedidos nuevos (Menu.tsx lo bloquea),
-    // así que ni siquiera abrimos el canal Realtime mientras esté cerrada.
     if (!isStoreOpen) return;
 
-    // Realtime
     const channel = supabase
       .channel(`orders-rt-${Date.now()}`)
       .on(
@@ -143,19 +143,17 @@ export function useOrders() {
       )
       .subscribe();
 
-    // When tab becomes visible: refetch + play queued chime
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         queryClientRef.current.invalidateQueries({ queryKey: ['orders'] });
         if (pendingChimeRef.current) {
           pendingChimeRef.current = false;
-          setTimeout(playChime, 300); // small delay so tab is fully active
+          setTimeout(playChime, 300);
         }
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Request notification permission (non-blocking)
     requestNotificationPermission();
 
     return () => {
@@ -274,7 +272,6 @@ export function useOrderHistory(filters: {
         query = query.gte('created_at', filters.dateFrom);
       }
       if (filters.dateTo) {
-        // Add 1 day to include the full end date
         const to = new Date(filters.dateTo);
         to.setDate(to.getDate() + 1);
         query = query.lt('created_at', to.toISOString());
@@ -285,7 +282,6 @@ export function useOrderHistory(filters: {
 
       let orders = data as Order[];
 
-      // Client-side search by name, whatsapp or order number
       if (filters.search) {
         const s = filters.search.toLowerCase();
         orders = orders.filter(o =>
