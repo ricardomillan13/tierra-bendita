@@ -1,14 +1,21 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'; 
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-const TWILIO_ACCOUNT_SID  = Deno.env.get('TWILIO_ACCOUNT_SID')!;
-const TWILIO_AUTH_TOKEN   = Deno.env.get('TWILIO_AUTH_TOKEN')!;
-const TWILIO_FROM         = Deno.env.get('TWILIO_WHATSAPP_FROM')!; // whatsapp:+14155238886 (sandbox) o whatsapp:+52... (prod)
+const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID')!;
+const TWILIO_AUTH_TOKEN  = Deno.env.get('TWILIO_AUTH_TOKEN')!;
+const TWILIO_FROM        = Deno.env.get('TWILIO_WHATSAPP_FROM')!;
 
-// ── Modo plantilla (producción con WhatsApp Business aprobado) ───────────────
-// Si configuras este secret, la función cambia automáticamente a usar la
-// plantilla aprobada por Meta en lugar de texto libre. No requiere tocar
-// código de nuevo cuando termines el alta del Sender + Template en Twilio.
-const TWILIO_CONTENT_SID  = Deno.env.get('TWILIO_ORDER_READY_TEMPLATE_SID'); // ej. HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// ── Plantillas por estatus ────────────────────────────────────────────────────
+const TEMPLATE_SIDS: Record<string, string | undefined> = {
+  received:  Deno.env.get('TWILIO_RECEIVED_TEMPLATE_SID'),
+  preparing: Deno.env.get('TWILIO_PREPARING_TEMPLATE_SID'),
+  ready:     Deno.env.get('TWILIO_ORDER_READY_TEMPLATE_SID'),
+};
+
+const TEMPLATE_VARS: Record<string, (name: string, order: string) => Record<string, string>> = {
+  received:  (name, order) => ({ '1': name || 'cliente', '2': order }),
+  preparing: (_name, order) => ({ '1': order }),
+  ready:     (name, order) => ({ '1': name || 'cliente', '2': order }),
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +28,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, orderNumber, customerName } = await req.json();
+    const { to, orderNumber, customerName, status = 'ready' } = await req.json();
 
     if (!to || !orderNumber) {
       return new Response(
@@ -30,47 +37,31 @@ serve(async (req) => {
       );
     }
 
-    // Normalize phone number → whatsapp:+521XXXXXXXXXX
+    // Normalize phone → whatsapp:+521XXXXXXXXXX
     const clean = to.replace(/\D/g, '');
-    // Mexico WhatsApp requires +521XXXXXXXXXX (10 digits → add 521 prefix)
     let phone: string;
-    if (clean.startsWith('521') && clean.length === 13) {
-      phone = `+${clean}`; // already correct
-    } else if (clean.startsWith('52') && clean.length === 12) {
-      phone = `+521${clean.slice(2)}`; // add missing 1
-    } else if (clean.length === 10) {
-      phone = `+521${clean}`; // just 10 digits
-    } else {
-      phone = `+${clean}`;
-    }
+    if (clean.startsWith('521') && clean.length === 13)     phone = `+${clean}`;
+    else if (clean.startsWith('52') && clean.length === 12) phone = `+521${clean.slice(2)}`;
+    else if (clean.length === 10)                           phone = `+521${clean}`;
+    else                                                    phone = `+${clean}`;
+
     const toWhatsApp = `whatsapp:${phone}`;
+    const contentSid = TEMPLATE_SIDS[status] || TEMPLATE_SIDS['ready'];
+    const varsBuilder = TEMPLATE_VARS[status] || TEMPLATE_VARS['ready'];
 
     const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
     const credentials = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
 
-    // ── Construir el cuerpo del request según el modo ──────────────────────
-    const params = new URLSearchParams({
-      To: toWhatsApp,
-      From: TWILIO_FROM,
-    });
+    const params = new URLSearchParams({ To: toWhatsApp, From: TWILIO_FROM });
 
-    if (TWILIO_CONTENT_SID) {
-      // MODO PRODUCCIÓN: plantilla aprobada por Meta (HSM).
-      // El número y el orden de las variables ({{1}}, {{2}}...) deben coincidir
-      // EXACTAMENTE con cómo registraste la plantilla en Twilio Content Editor.
-      // Ejemplo de plantilla:
-      //   "Hola {{1}} 👋 Tu pedido #{{2}} en Tierra Bendita ya está listo. ¡Pasa a recogerlo!"
-      params.set('ContentSid', TWILIO_CONTENT_SID);
-      params.set('ContentVariables', JSON.stringify({
-        '1': customerName || 'cliente',
-        '2': String(orderNumber),
-      }));
+    if (contentSid) {
+      params.set('ContentSid', contentSid);
+      params.set('ContentVariables', JSON.stringify(
+        varsBuilder(customerName || 'cliente', String(orderNumber))
+      ));
     } else {
-      // MODO SANDBOX / DESARROLLO: texto libre (no funciona fuera del Sandbox
-      // de Twilio una vez que el negocio esté en producción con WhatsApp Business).
       const greeting = customerName ? `Hola ${customerName} 👋` : 'Hola 👋';
-      const body = `${greeting}\n\n☕ Tu pedido *#${orderNumber}* en *Tierra Bendita* ya está listo.\n\n¡Pasa a recogerlo, te esperamos!`;
-      params.set('Body', body);
+      params.set('Body', `${greeting}\n\n☕ Tu pedido *#${orderNumber}* en *Tierra Bendita*.\n\n¡Gracias por tu preferencia!`);
     }
 
     const response = await fetch(url, {
@@ -93,7 +84,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sid: result.sid, mode: TWILIO_CONTENT_SID ? 'template' : 'freeform' }),
+      JSON.stringify({ success: true, sid: result.sid, status }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
