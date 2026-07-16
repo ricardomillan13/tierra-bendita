@@ -436,19 +436,33 @@ export default function Sales() {
 
   const handleQRScan = useCallback((text: string) => {
     const scanned = text.trim().toLowerCase();
-    const match = items.find(item =>
-      item.product_name.toLowerCase().includes(scanned) ||
-      scanned.includes(item.product_name.toLowerCase())
+
+    // 1. Coincidencia exacta (prioridad máxima)
+    let match = items.find(item =>
+      item.product_name.toLowerCase() === scanned
     );
+
+    // 2. Si no hay exacta, busca parcial — solo si es ÚNICA
+    if (!match) {
+      const partials = items.filter(item =>
+        item.product_name.toLowerCase().includes(scanned) ||
+        scanned.includes(item.product_name.toLowerCase())
+      );
+      if (partials.length === 1) match = partials[0];
+    }
+
     if (match && match.quantity < match.stock) {
       setItems(prev => prev.map(i =>
-        i.product_id === match.product_id ? { ...i, quantity: i.quantity + 1 } : i
+        i.product_id === match!.product_id ? { ...i, quantity: i.quantity + 1 } : i
       ));
       setHighlightId(match.product_id);
       setTimeout(() => setHighlightId(null), 800);
       setQrNotFound(null);
     } else if (!match) {
       setQrNotFound(text);
+      setTimeout(() => setQrNotFound(null), 2000);
+    } else {
+      setQrNotFound(`Ambiguo: "${text}" — usa el nombre exacto`);
       setTimeout(() => setQrNotFound(null), 2000);
     }
   }, [items]);
