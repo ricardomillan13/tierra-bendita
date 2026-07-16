@@ -3,6 +3,7 @@ import { Clock, CheckCircle, ChefHat, MessageCircle, Printer, ChevronDown, Chevr
 import { Order, OrderItem } from '@/types/menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useOrderItems, useUpdateOrderStatus, useMarkWhatsAppNotified } from '@/hooks/useOrders';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +56,7 @@ export function OrderCard({ order }: OrderCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showWhatsAppConfirm, setShowWhatsAppConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [pendingStatusChange, setPendingStatusChange] = useState<'ready' | null>(null);
   
   const { data: items = [] } = useOrderItems(order.id);
@@ -66,7 +68,10 @@ export function OrderCard({ order }: OrderCardProps) {
   const status = statusConfig[order.status];
   const StatusIcon = status.icon;
 
-  const sendWhatsApp = async (statusType: 'received' | 'preparing' | 'ready' = 'ready') => {
+  const sendWhatsApp = async (
+    statusType: 'received' | 'preparing' | 'ready' | 'cancelled' = 'ready',
+    cancelReasonText?: string
+  ) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-whatsapp', {
         body: {
@@ -74,6 +79,7 @@ export function OrderCard({ order }: OrderCardProps) {
           orderNumber: order.order_number,
           customerName: order.customer_name || undefined,
           status: statusType,
+          ...(statusType === 'cancelled' ? { cancelReason: cancelReasonText || undefined } : {}),
         },
       });
 
@@ -87,6 +93,7 @@ export function OrderCard({ order }: OrderCardProps) {
         received:  'Pedido recibido',
         preparing: 'En preparación',
         ready:     'Listo para recoger',
+        cancelled: 'Pedido cancelado',
       };
 
       toast({
@@ -106,17 +113,26 @@ export function OrderCard({ order }: OrderCardProps) {
   const handleStatusChange = (newStatus: Order['status']) => {
     const autoNotify = settings?.whatsapp_auto_notify?.enabled;
 
+    // "Listo" respeta el switch de auto-notificación (a demanda del negocio).
     if (newStatus === 'ready' && autoNotify && !order.whatsapp_notified) {
       setPendingStatusChange('ready');
       setShowWhatsAppConfirm(true);
-    } else {
-      updateStatus.mutate({ id: order.id, status: newStatus });
-      if (autoNotify) {
-        setTimeout(() => {
-          if (newStatus === 'preparing') sendWhatsApp('preparing');
-        }, 300);
-      }
+      return;
     }
+
+    updateStatus.mutate({ id: order.id, status: newStatus });
+
+    // "Recibido" y "Preparando" siempre se notifican, sin importar el switch.
+    if (newStatus === 'preparing') {
+      setTimeout(() => sendWhatsApp('preparing'), 300);
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    updateStatus.mutate({ id: order.id, status: 'cancelled', cancelReason });
+    setTimeout(() => sendWhatsApp('cancelled', cancelReason), 300);
+    setShowCancelConfirm(false);
+    setCancelReason('');
   };
 
   const handleWhatsAppConfirm = (sendNotification: boolean) => {
@@ -305,7 +321,7 @@ export function OrderCard({ order }: OrderCardProps) {
       </div>
 
       {/* Cancel Confirmation Dialog */}
-      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+      <AlertDialog open={showCancelConfirm} onOpenChange={(open) => { setShowCancelConfirm(open); if (!open) setCancelReason(''); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -314,13 +330,25 @@ export function OrderCard({ order }: OrderCardProps) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               ¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.
+              Le avisaremos al cliente por WhatsApp junto con el motivo.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="px-1 pb-2">
+            <label className="text-sm text-muted-foreground mb-1 block">
+              Motivo de cancelación (opcional)
+            </label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Ej. Nos quedamos sin ingredientes para tu pedido"
+              rows={3}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              onClick={() => { updateStatus.mutate({ id: order.id, status: 'cancelled' }); setShowCancelConfirm(false); }}
+              onClick={handleCancelConfirm}
             >
               Sí, cancelar
             </AlertDialogAction>
