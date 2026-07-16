@@ -120,7 +120,7 @@ export function Cart({ items, total, itemCount, onUpdateQuantity, onRemove, onCl
             </p>
             {/* Avísame cuando esté listo */}
             <a
-              href={`https://wa.me/14155238886?text=${encodeURIComponent('Quiero recibir notificaciones de Tierra Bendita')}`}
+              href={`https://wa.me/5217226101200?text=${encodeURIComponent('Quiero recibir notificaciones de Tierra Bendita')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-all"
