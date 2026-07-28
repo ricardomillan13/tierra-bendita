@@ -756,8 +756,3 @@ export function SellersPanel() {
     </Tabs>
   );
 }
-
-      </TabsContent>
-    </Tabs>
-  );
-}
