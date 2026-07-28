@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { enqueueSale, countPending, requestBackgroundSync, PendingSale } from '@/lib/offlineQueue';
 import { flushPendingSales } from '@/lib/syncSales';
 
@@ -17,6 +18,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 export function useOfflineSync() {
+  const queryClient = useQueryClient();
   const [isOnline, setIsOnline]         = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing]           = useState(false);
@@ -81,7 +83,12 @@ export function useOfflineSync() {
     setSyncing(true);
     try {
       const { synced } = await flushPendingSales();
-      if (synced > 0) setLastSync(new Date());
+      if (synced > 0) {
+        setLastSync(new Date());
+        // El RPC de descuento ya corrió en el servidor — refresca el caché
+        // local para que quede alineado con la BD (evita el "reseteo" visual).
+        queryClient.invalidateQueries({ queryKey: ['seller_inventory'] });
+      }
       await refreshCount();
     } finally {
       flushRef.current = false;
