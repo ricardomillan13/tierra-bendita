@@ -127,6 +127,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          cancel_reason: string | null
           completed_at: string | null
           created_at: string
           customer_name: string | null
@@ -142,6 +143,7 @@ export type Database = {
           whatsapp_notified: boolean
         }
         Insert: {
+          cancel_reason?: string | null
           completed_at?: string | null
           created_at?: string
           customer_name?: string | null
@@ -157,6 +159,7 @@ export type Database = {
           whatsapp_notified?: boolean
         }
         Update: {
+          cancel_reason?: string | null
           completed_at?: string | null
           created_at?: string
           customer_name?: string | null
@@ -172,6 +175,112 @@ export type Database = {
           whatsapp_notified?: boolean
         }
         Relationships: []
+      }
+      business_inventory: {
+        Row: {
+          id: string
+          product_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_closeouts: {
+        Row: {
+          id: string
+          seller_id: string
+          closed_by: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          seller_id: string
+          closed_by?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          seller_id?: string
+          closed_by?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_closeouts_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_closeout_items: {
+        Row: {
+          id: string
+          closeout_id: string
+          product_id: string
+          product_name: string
+          system_qty: number
+          returned_qty: number
+          shrinkage_qty: number
+        }
+        Insert: {
+          id?: string
+          closeout_id: string
+          product_id: string
+          product_name: string
+          system_qty: number
+          returned_qty: number
+          shrinkage_qty: number
+        }
+        Update: {
+          id?: string
+          closeout_id?: string
+          product_id?: string
+          product_name?: string
+          system_qty?: number
+          returned_qty?: number
+          shrinkage_qty?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_closeout_items_closeout_id_fkey"
+            columns: ["closeout_id"]
+            isOneToOne: false
+            referencedRelation: "shift_closeouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_closeout_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -390,6 +499,28 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      decrement_seller_inventory: {
+        Args: {
+          p_seller_id: string
+          p_product_id: string
+          p_qty: number
+        }
+        Returns: undefined
+      }
+      decrement_business_inventory: {
+        Args: {
+          p_product_id: string
+          p_qty: number
+        }
+        Returns: undefined
+      }
+      increment_business_inventory: {
+        Args: {
+          p_product_id: string
+          p_qty: number
+        }
+        Returns: undefined
       }
     }
     Enums: {
