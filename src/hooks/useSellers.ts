@@ -147,10 +147,12 @@ export function useUpsertSellerInventory() {
       seller_id,
       product_id,
       quantity,
+      delta,
     }: {
       seller_id: string;
       product_id: string;
       quantity: number;
+      delta?: number; // unidades netas movidas del inventario general (+asigna / -regresa)
     }) => {
       const { error } = await supabase
         .from('seller_inventory')
@@ -159,9 +161,24 @@ export function useUpsertSellerInventory() {
           { onConflict: 'seller_id,product_id' }
         );
       if (error) throw error;
+
+      if (delta && delta > 0) {
+        const { error: decErr } = await supabase.rpc('decrement_business_inventory', {
+          p_product_id: product_id,
+          p_qty:        delta,
+        });
+        if (decErr) throw decErr;
+      } else if (delta && delta < 0) {
+        const { error: incErr } = await supabase.rpc('increment_business_inventory', {
+          p_product_id: product_id,
+          p_qty:        -delta,
+        });
+        if (incErr) throw incErr;
+      }
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['seller_inventory', vars.seller_id] });
+      queryClient.invalidateQueries({ queryKey: ['business_inventory'] });
       toast({ title: 'Inventario actualizado' });
     },
     onError: (err: any) => {
