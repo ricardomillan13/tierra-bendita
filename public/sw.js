@@ -180,6 +180,27 @@ async function flushPendingSales() {
 
       if (!itemsRes.ok) throw new Error(`Items insert failed: ${itemsRes.status}`);
 
+      // Persistir el descuento en el inventario del vendedor (mismo RPC que usa el hilo principal).
+      for (const item of sale.items) {
+        try {
+          await fetch(`${cfg.url}/rest/v1/rpc/decrement_seller_inventory`, {
+            method:  'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'apikey':         cfg.key,
+              'Authorization': `Bearer ${cfg.key}`,
+            },
+            body: JSON.stringify({
+              p_seller_id:  sale.seller_id,
+              p_product_id: item.product_id,
+              p_qty:        item.quantity,
+            }),
+          });
+        } catch (decErr) {
+          console.warn(`[SW] No se pudo descontar inventario de ${item.product_name}:`, decErr);
+        }
+      }
+
       await idbDelete(db, sale.id);
       synced++;
     } catch (err) {
