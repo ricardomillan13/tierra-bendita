@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { UserPlus, Package, BarChart2, ToggleLeft, ToggleRight, Loader2, TrendingUp, TrendingDown, Users, DollarSign, ShoppingBag } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { UserPlus, Package, BarChart2, ToggleLeft, ToggleRight, Loader2, TrendingUp, TrendingDown, Users, DollarSign, ShoppingBag, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,9 @@ import {
   useAllSellersMetrics,
 } from '@/hooks/useSellers';
 import { useAllProducts } from '@/hooks/useProducts';
+import { useAllCategories } from '@/hooks/useCategories';
+import { useBusinessInventory, useUpsertBusinessInventory, useCreateShiftCloseout } from '@/hooks/useBusinessInventory';
+import { useToast } from '@/hooks/use-toast';
 
 // ── Design helpers ────────────────────────────────────────────────────────────
 const GOLD = '#c9a84c';
@@ -97,22 +100,57 @@ function CreateSellerDialog() {
 
 // ── Inventory Manager ─────────────────────────────────────────────────────────
 function InventoryManager() {
-  const { data: sellers = [] }  = useSellers();
-  const { data: products = [] } = useAllProducts();
+  const { data: sellers = [] }    = useSellers();
+  const { data: products = [] }   = useAllProducts();
+  const { data: categories = [] } = useAllCategories();
   const [selectedSeller, setSelectedSeller] = useState<string>('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingVal, setEditingVal] = useState<string>('');
+  const [search, setSearch] = useState('');
   const { data: inventory = [], isLoading: invLoading } = useSellerInventory(selectedSeller || undefined);
   const upsert = useUpsertSellerInventory();
+  const { toast } = useToast();
 
-  const allProducts = products.filter(p => p.is_available);
+  // Solo categorías "Bolis" (Bolis de Agua, Bolis de Leche, Bolis Especiales, etc.)
+  // pueden asignarse a vendedores.
+  const bolisCategoryIds = useMemo(
+    () => new Set(
+      categories
+        .filter(c => c.name.trim().toLowerCase().startsWith('bolis'))
+        .map(c => c.id)
+    ),
+    [categories]
+  );
+
+  const bolisProducts = products
+    .filter(p => p.is_available && p.category_id && bolisCategoryIds.has(p.category_id));
+
+  const allProducts = bolisProducts
+    .filter(p => p.name.toLowerCase().includes(search.trim().toLowerCase()));
+
+  const { data: businessInventory = [] } = useBusinessInventory();
+  const getGeneralStock = (productId: string) =>
+    businessInventory.find(i => i.product_id === productId)?.quantity ?? 0;
 
   const getQty = (productId: string) =>
     inventory.find(i => i.product_id === productId)?.quantity ?? 0;
 
   const setQty = (productId: string, qty: number) => {
     if (!selectedSeller) return;
-    upsert.mutate({ seller_id: selectedSeller, product_id: productId, quantity: Math.max(0, qty) });
+    const target = Math.max(0, qty);
+    const current = getQty(productId);
+    const delta = target - current; // + = se toma del inventario general, - = se regresa
+
+    if (delta > 0 && delta > getGeneralStock(productId)) {
+      toast({
+        title: 'No hay suficiente inventario general',
+        description: `Solo quedan ${getGeneralStock(productId)} unidades disponibles para asignar.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    upsert.mutate({ seller_id: selectedSeller, product_id: productId, quantity: target, delta });
   };
 
   const handleEditCommit = (productId: string) => {
@@ -122,8 +160,8 @@ function InventoryManager() {
   };
 
   const activeSellers = sellers.filter(s => s.is_active);
-  const totalUnits = allProducts.reduce((s, p) => s + getQty(p.id), 0);
-  const totalValue = allProducts.reduce((s, p) => s + getQty(p.id) * p.price, 0);
+  const totalUnits = bolisProducts.reduce((s, p) => s + getQty(p.id), 0);
+  const totalValue = bolisProducts.reduce((s, p) => s + getQty(p.id) * p.price, 0);
 
   return (
     <div className="space-y-4">
@@ -154,6 +192,17 @@ function InventoryManager() {
 
       {selectedSeller && !invLoading && (
         <>
+          {/* Búsqueda de productos */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar producto..."
+              className="pl-9"
+            />
+          </div>
+
           {/* Summary bar */}
           {totalUnits > 0 && (
             <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-primary/10 border border-primary/20">
@@ -166,11 +215,18 @@ function InventoryManager() {
           )}
 
           {/* Product grid */}
+          {allProducts.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              {search ? 'Sin resultados para tu búsqueda' : 'No hay productos Bolis disponibles'}
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-2">
             {allProducts.map(product => {
               const qty = getQty(product.id);
               const hasQty = qty > 0;
               const isEditing = editingId === product.id;
+              const generalStock = getGeneralStock(product.id);
+              const atMax = generalStock <= 0;
 
               return (
                 <div
@@ -192,7 +248,9 @@ function InventoryManager() {
                   {/* Name + price */}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">${product.price.toFixed(2)} c/u</p>
+                    <p className="text-xs text-muted-foreground">
+                      ${product.price.toFixed(2)} c/u · <span className={atMax ? 'text-destructive' : ''}>{generalStock} disp.</span>
+                    </p>
                   </div>
 
                   {/* Counter */}
@@ -227,7 +285,8 @@ function InventoryManager() {
 
                     <button
                       onClick={() => setQty(product.id, qty + 1)}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-light transition-all hover:bg-secondary active:scale-95"
+                      disabled={atMax}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-light transition-all disabled:opacity-30 hover:bg-secondary active:scale-95"
                     >+</button>
                   </div>
                 </div>
@@ -254,6 +313,233 @@ function InventoryManager() {
 }
 
 
+
+// ── Business (General) Inventory Manager ────────────────────────────────────
+function BusinessInventoryManager() {
+  const { data: products = [] }   = useAllProducts();
+  const { data: inventory = [], isLoading } = useBusinessInventory();
+  const [search, setSearch] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingVal, setEditingVal] = useState<string>('');
+  const upsert = useUpsertBusinessInventory();
+
+  const getQty = (productId: string) =>
+    inventory.find(i => i.product_id === productId)?.quantity ?? 0;
+
+  const allProducts = products
+    .filter(p => p.is_available)
+    .filter(p => p.name.toLowerCase().includes(search.trim().toLowerCase()));
+
+  const handleEditCommit = (productId: string) => {
+    const qty = Math.max(0, parseInt(editingVal) || 0);
+    upsert.mutate({ product_id: productId, quantity: qty });
+    setEditingId(null);
+  };
+
+  const totalUnits = products.reduce((s, p) => s + getQty(p.id), 0);
+  const totalValue = products.reduce((s, p) => s + getQty(p.id) * p.price, 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-10">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar producto..."
+          className="pl-9"
+        />
+      </div>
+
+      {totalUnits > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-primary/10 border border-primary/20">
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold">{totalUnits} unidades en almacén</span>
+          </div>
+          <span className="text-sm font-bold text-primary">${totalValue.toFixed(2)}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-2">
+        {allProducts.map(product => {
+          const qty = getQty(product.id);
+          const isEditing = editingId === product.id;
+          return (
+            <div key={product.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40">
+              <div className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden bg-secondary flex items-center justify-center">
+                {product.image_url
+                  ? <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
+                  : <img src="/logo.png" alt={product.name} className="w-full h-full object-contain rounded-full opacity-70 p-1" />
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{product.name}</p>
+                <p className="text-xs text-muted-foreground">${product.price.toFixed(2)} c/u</p>
+              </div>
+              {isEditing ? (
+                <input
+                  type="number"
+                  min="0"
+                  autoFocus
+                  value={editingVal}
+                  onChange={e => setEditingVal(e.target.value)}
+                  onBlur={() => handleEditCommit(product.id)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleEditCommit(product.id); if (e.key === 'Escape') setEditingId(null); }}
+                  className="w-20 h-9 text-center text-base font-bold rounded-lg border border-primary bg-background outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => { setEditingId(product.id); setEditingVal(String(qty)); }}
+                  className="w-20 h-9 rounded-lg text-base font-bold transition-all hover:bg-secondary"
+                  style={{ color: qty > 0 ? GOLD : undefined }}
+                >
+                  {qty}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Shift Closeout ────────────────────────────────────────────────────────────
+function ShiftCloseoutPanel() {
+  const { data: sellers = [] } = useSellers();
+  const [selectedSeller, setSelectedSeller] = useState<string>('');
+  const { data: inventory = [], isLoading } = useSellerInventory(selectedSeller || undefined);
+  const [returns, setReturns] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState('');
+  const createCloseout = useCreateShiftCloseout();
+  const { toast } = useToast();
+
+  const activeSellers = sellers.filter(s => s.is_active);
+  const itemsWithStock = inventory.filter(i => i.quantity > 0);
+
+  const handleSubmit = () => {
+    if (!selectedSeller || itemsWithStock.length === 0) return;
+    const items = itemsWithStock.map(i => ({
+      product_id: i.product_id,
+      product_name: i.product_name || 'Producto',
+      system_qty: i.quantity,
+      returned_qty: Math.max(0, Math.min(i.quantity, parseInt(returns[i.product_id] ?? '0') || 0)),
+    }));
+    createCloseout.mutate(
+      { seller_id: selectedSeller, items, notes: notes.trim() || undefined },
+      {
+        onSuccess: () => {
+          setSelectedSeller('');
+          setReturns({});
+          setNotes('');
+        },
+      }
+    );
+  };
+
+  const totalShrinkage = itemsWithStock.reduce((s, i) => {
+    const returned = Math.max(0, Math.min(i.quantity, parseInt(returns[i.product_id] ?? '0') || 0));
+    return s + (i.quantity - returned);
+  }, 0);
+
+  return (
+    <div className="space-y-4">
+      <Select value={selectedSeller} onValueChange={v => { setSelectedSeller(v); setReturns({}); }}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Selecciona un vendedor para cerrar turno" />
+        </SelectTrigger>
+        <SelectContent>
+          {activeSellers.map(s => (
+            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {!selectedSeller && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+          <Package className="w-10 h-10 opacity-30" />
+          <p className="text-sm">Selecciona un vendedor para registrar su cierre</p>
+        </div>
+      )}
+
+      {selectedSeller && isLoading && (
+        <div className="flex justify-center py-10">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {selectedSeller && !isLoading && itemsWithStock.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-10">
+          Este vendedor no tiene inventario pendiente por regresar.
+        </p>
+      )}
+
+      {selectedSeller && !isLoading && itemsWithStock.length > 0 && (
+        <>
+          <p className="text-xs text-muted-foreground">
+            "Sistema" = lo que debería tener sin vender, según ventas registradas. Captura lo que físicamente te regresa.
+          </p>
+          <div className="grid grid-cols-1 gap-2">
+            {itemsWithStock.map(item => {
+              const returnedRaw = returns[item.product_id] ?? '';
+              const returned = Math.max(0, Math.min(item.quantity, parseInt(returnedRaw) || 0));
+              const missing = item.quantity - returned;
+              return (
+                <div key={item.product_id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{item.product_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Sistema: {item.quantity} · {missing > 0
+                        ? <span className="text-destructive">Faltante: {missing}</span>
+                        : <span className="text-success">Completo</span>}
+                    </p>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max={item.quantity}
+                    placeholder="0"
+                    value={returnedRaw}
+                    onChange={e => setReturns(prev => ({ ...prev, [item.product_id]: e.target.value }))}
+                    className="w-20 h-9 text-center text-base font-bold rounded-lg border border-primary bg-background outline-none"
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Notas (opcional)</Label>
+            <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ej. faltante reportado por el vendedor" />
+          </div>
+
+          {totalShrinkage > 0 && (
+            <div className="px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive font-medium">
+              {totalShrinkage} unidades sin regresar ni justificar con venta — quedarán registradas como merma.
+            </div>
+          )}
+
+          <Button
+            className="w-full"
+            onClick={handleSubmit}
+            disabled={createCloseout.isPending}
+          >
+            {createCloseout.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar cierre de turno'}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
 
 // ── Metrics Dashboard ─────────────────────────────────────────────────────────
 function MetricsDashboard() {
@@ -430,9 +716,17 @@ export function SellersPanel() {
   return (
     <Tabs defaultValue="inventory" className="space-y-4">
       <TabsList>
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            General
+          </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-2">
             <Package className="w-4 h-4" />
             Inventario
+          </TabsTrigger>
+          <TabsTrigger value="closeout" className="flex items-center gap-2">
+            <ToggleRight className="w-4 h-4" />
+            Cierre de turno
           </TabsTrigger>
           <TabsTrigger value="metrics" className="flex items-center gap-2">
             <BarChart2 className="w-4 h-4" />
@@ -440,14 +734,29 @@ export function SellersPanel() {
           </TabsTrigger>
         </TabsList>
 
+      {/* ── General inventory tab ── */}
+      <TabsContent value="general">
+        <BusinessInventoryManager />
+      </TabsContent>
+
       {/* ── Inventory tab ── */}
       <TabsContent value="inventory">
         <InventoryManager />
       </TabsContent>
 
+      {/* ── Shift closeout tab ── */}
+      <TabsContent value="closeout">
+        <ShiftCloseoutPanel />
+      </TabsContent>
+
       {/* ── Metrics tab ── */}
       <TabsContent value="metrics">
         <MetricsDashboard />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
       </TabsContent>
     </Tabs>
   );
