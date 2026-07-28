@@ -218,9 +218,23 @@ export function useCreateOrder() {
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
+
+      // Descuenta del inventario general (solo productos reales, no promos).
+      for (const item of items) {
+        if (item.product.id.startsWith('promo_')) continue;
+        const { error: decErr } = await supabase.rpc('decrement_business_inventory', {
+          p_product_id: item.product.id,
+          p_qty:        item.quantity,
+        });
+        if (decErr) console.warn(`No se pudo descontar inventario general de ${item.product.name}:`, decErr);
+      }
+
       return order as Order;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['business_inventory'] });
+    },
   });
 }
 
