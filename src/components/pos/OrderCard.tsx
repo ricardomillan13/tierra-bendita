@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useOrderItems, useUpdateOrderStatus, useMarkWhatsAppNotified } from '@/hooks/useOrders';
+import { useAllProducts } from '@/hooks/useProducts';
+import { useAllCategories } from '@/hooks/useCategories';
 import { supabase } from '@/integrations/supabase/client';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/use-toast';
@@ -61,9 +63,16 @@ export function OrderCard({ order }: OrderCardProps) {
   
   const { data: items = [] } = useOrderItems(order.id);
   const { data: settings } = useSettings();
+  const { data: allProducts = [] } = useAllProducts();
+  const { data: categories = [] } = useAllCategories();
   const updateStatus = useUpdateOrderStatus();
   const markNotified = useMarkWhatsAppNotified();
   const { toast } = useToast();
+
+  const categoryNameById = new Map(categories.map(c => [c.id, c.name]));
+  const categoryByProductId = new Map(
+    allProducts.map(p => [p.id, p.category_id ? categoryNameById.get(p.category_id) : undefined])
+  );
 
   const status = statusConfig[order.status];
   const StatusIcon = status.icon;
@@ -230,14 +239,22 @@ export function OrderCard({ order }: OrderCardProps) {
           <div className="border-t p-4 space-y-4">
             {/* Items */}
             <div className="space-y-2">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <span>
-                    <span className="font-medium">{item.quantity}x</span> {item.product_name}
-                  </span>
-                  <span className="text-muted-foreground">${item.subtotal.toFixed(2)}</span>
-                </div>
-              ))}
+              {items.map((item) => {
+                const categoryName = item.product_id ? categoryByProductId.get(item.product_id) : undefined;
+                return (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{item.quantity}x</span> {item.product_name}
+                      {categoryName && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal text-muted-foreground">
+                          {categoryName}
+                        </Badge>
+                      )}
+                    </span>
+                    <span className="text-muted-foreground">${item.subtotal.toFixed(2)}</span>
+                  </div>
+                );
+              })}
             </div>
 
             {order.notes && (
