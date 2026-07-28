@@ -71,6 +71,17 @@ export async function flushPendingSales(): Promise<SyncResult> {
       const { error: itemsErr } = await supabase.from('order_items').insert(items);
       if (itemsErr) throw itemsErr;
 
+      // Persistir el descuento en el inventario del vendedor —
+      // sin esto, el stock se resetea al recargar el PWA.
+      for (const item of sale.items) {
+        const { error: decErr } = await supabase.rpc('decrement_seller_inventory', {
+          p_seller_id:  sale.seller_id,
+          p_product_id: item.product_id,
+          p_qty:        item.quantity,
+        });
+        if (decErr) console.warn(`[sync] No se pudo descontar inventario de ${item.product_name}:`, decErr);
+      }
+
       await markSynced(sale.id);
       synced++;
     } catch (err) {
